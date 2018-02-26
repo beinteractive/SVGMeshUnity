@@ -15,7 +15,7 @@ namespace SVGMeshUnity
         
         // https://github.com/jkroso/parse-svg-path
         
-        private List<Curve> Curves = new List<Curve>();
+        internal List<Curve> Curves = new List<Curve>();
 
         private Vector2 Start;
         private Vector2 Current;

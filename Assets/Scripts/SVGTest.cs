@@ -13,6 +13,8 @@ public class SVGTest : MonoBehaviour
         c0.543,0,1.035,0.23,1.38,0.598c0.431-0.086,0.835-0.242,1.2-0.459c-0.141,0.441-0.44,0.812-0.831,1.047
         c0.383-0.047,0.747-0.148,1.086-0.299C14.595,7.664,14.274,7.998,13.905,8.264z";
 
+    [SerializeField] private SVGMesh Mesh;
+
     void Start()
     {
         var data = new SVGData();
@@ -20,5 +22,7 @@ public class SVGTest : MonoBehaviour
         data.Path(SVG_PATH);
         
         Debug.Log(data.Dump());
+        
+        Mesh.Fill(data);
     }
 }
