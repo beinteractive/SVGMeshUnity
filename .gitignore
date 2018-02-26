@@ -1,0 +1,13 @@
+.DS_Store
+
+/Library
+/Temp
+/Movies
+
+.idea
+*.sln
+*.csproj
+obj
+
+GeneratedShader.shader
+UberShader.shader
