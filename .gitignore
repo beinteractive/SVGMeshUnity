@@ -4,6 +4,8 @@
 /Temp
 /Movies
 
+/Assets/Plugins/Editor/JetBrains*
+
 .idea
 *.sln
 *.csproj
