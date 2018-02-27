@@ -216,12 +216,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Scale: 10
-  PathDistanceEpsilon: 1
-  RecursionLimit: 8
-  FLTEpsilon: 0.00000011920929
-  AngleEpsilon: 0.01
-  AngleTolerance: 0
-  CuspLimit: 0
 --- !u!23 &844179447
 MeshRenderer:
   m_ObjectHideFlags: 0

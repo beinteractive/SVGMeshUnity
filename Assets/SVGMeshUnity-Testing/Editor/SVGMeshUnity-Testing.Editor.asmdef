@@ -1,0 +1,14 @@
+{
+    "name": "SVGMeshUnity-Testing",
+    "references": [
+        "SVGMeshUnity"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
+}

@@ -16,11 +16,14 @@ namespace SVGMeshUnity.Internals
         public float AngleTolerance = 0f;
         public float CuspLimit = 0f;
 
-        public MeshData MeshData;
-        public WorkBuffer<Vector2> WorkVertices;
+        public WorkBufferPool WorkBufferPool;
+
+        private WorkBuffer<Vector2> WorkVertices;
         
-        public void GetContours(SVGData svg)
+        public void GetContours(SVGData svg, MeshData data)
         {
+            WorkBufferPool.Get(ref WorkVertices);
+            
             var pen = Vector2.zero;
             
             var curves = svg.Curves;
@@ -30,7 +33,7 @@ namespace SVGMeshUnity.Internals
                 var curve = curves[i];
                 if (curve.IsMove)
                 {
-                    EmitWorkVerticesIfNeeded();
+                    EmitWorkVerticesIfNeeded(data);
                 }
                 else
                 {
@@ -38,10 +41,13 @@ namespace SVGMeshUnity.Internals
                 }
                 pen = curve.Position;
             }
-            EmitWorkVerticesIfNeeded();
+            
+            EmitWorkVerticesIfNeeded(data);
+            
+            WorkBufferPool.Release(ref WorkVertices);
         }
 
-        private void EmitWorkVerticesIfNeeded()
+        private void EmitWorkVerticesIfNeeded(MeshData data)
         {
             if (WorkVertices.UsedSize == 0)
             {
@@ -50,7 +56,7 @@ namespace SVGMeshUnity.Internals
             
             // TODO: Simplify
             
-            MeshData.AddVertices(WorkVertices);
+            data.AddVertices(WorkVertices);
             WorkVertices.Clear();
         }
 

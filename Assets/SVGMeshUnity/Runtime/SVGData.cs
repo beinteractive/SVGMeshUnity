@@ -509,7 +509,7 @@ namespace SVGMeshUnity
                         return string.Format("C {0} {1}, {2} {3}, {4} {5}", _.InControl.x, _.InControl.y, _.OutControl.x, _.OutControl.y, _.Position.x, _.Position.y);
                     }
                 })
-                .Aggregate("", (_, s) => _ + " " + s);
+                .Aggregate("", (_, s) => _ + s + " ");
         }
 
         #endregion

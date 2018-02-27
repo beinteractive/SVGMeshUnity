@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using SVGMeshUnity.Internals;
+﻿using SVGMeshUnity.Internals;
+using SVGMeshUnity.Internals.Cdt2d;
 using UnityEngine;
 
 namespace SVGMeshUnity
@@ -10,35 +10,33 @@ namespace SVGMeshUnity
 
         public float Scale = 1f;
         
-        private static WorkBuffer<Vector2> WorkVertices = new WorkBuffer<Vector2>(32);
+        private static WorkBufferPool WorkBufferPool = new WorkBufferPool();
         
         private MeshData MeshData = new MeshData();
         private Mesh Mesh;
 
         private BezierToVertex BezierToVertex;
+        private Triangulation Triangulation;
 
         private void Awake()
         {
             BezierToVertex = new BezierToVertex();
-            BezierToVertex.MeshData = MeshData;
-            BezierToVertex.WorkVertices = WorkVertices;
+            BezierToVertex.WorkBufferPool = WorkBufferPool;
+            
+            Triangulation = new Triangulation();
+            Triangulation.WorkBufferPool = WorkBufferPool;
         }
         
         public void Fill(SVGData svg)
         {
-            WorkVertices.Clear();
             MeshData.Clear();
             
             // convert curves into discrete points
             BezierToVertex.Scale = Scale;
-            BezierToVertex.GetContours(svg);
+            BezierToVertex.GetContours(svg, MeshData);
             
-            for (var i = 0; i < MeshData.Vertices.Count - 2; ++i)
-            {
-                MeshData.Triangles.Add(i + 0);
-                MeshData.Triangles.Add(i + 1);
-                MeshData.Triangles.Add(i + 2);
-            }
+            // triangulate mesh
+            Triangulation.BuildTriangles(MeshData);
             
             if (Mesh == null)
             {
@@ -46,6 +44,7 @@ namespace SVGMeshUnity
                 Mesh.MarkDynamic();
             }
             
+            MeshData.Flip();
             MeshData.Upload(Mesh);
 
             var filter = GetComponent<MeshFilter>();
