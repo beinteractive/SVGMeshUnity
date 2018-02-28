@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SVGMeshUnity.Internals
@@ -10,6 +11,7 @@ namespace SVGMeshUnity.Internals
             Vertices = new List<Vector3>();
             Edges = new List<int>();
             Triangles = new List<int>();
+            VertexIndices = new Hashtable();
         }
         
         public List<Vector3> Vertices { get; private set; }
@@ -21,11 +23,14 @@ namespace SVGMeshUnity.Internals
             get { return Edges.Count / 2; }
         }
 
+        private Hashtable VertexIndices;
+
         public void Clear()
         {
             Vertices.Clear();
             Edges.Clear();
             Triangles.Clear();
+            VertexIndices.Clear();
         }
 
         public void AddVertices(WorkBuffer<Vector2> buffer)
@@ -33,14 +38,29 @@ namespace SVGMeshUnity.Internals
             var firstEdgeIdx = -1;
             var prevEdgeidx = -1;
 
-            for (var i = 0; i < buffer.UsedSize; ++i)
+            var vertices = Vertices;
+            var edges = Edges;
+            var indicies = VertexIndices;
+
+            var size = buffer.UsedSize;
+            var data = buffer.Data;
+
+            for (var i = 0; i < size; ++i)
             {
-                var v = buffer.Data[i];
-                var idx = Vertices.IndexOf(v);
+                var v = data[i];
+                var idx = -1;
+
+                var index = indicies[v];
+                if (index != null)
+                {
+                    idx = (int) index;
+                }
+                
                 if (idx == -1)
                 {
-                    Vertices.Add(v);
-                    idx = Vertices.Count - 1;
+                    vertices.Add(v);
+                    idx = vertices.Count - 1;
+                    indicies[v] = idx;
                 }
 
                 if (idx == prevEdgeidx)
@@ -54,8 +74,8 @@ namespace SVGMeshUnity.Internals
                 }
                 else
                 {
-                    Edges.Add(prevEdgeidx);
-                    Edges.Add(idx);
+                    edges.Add(prevEdgeidx);
+                    edges.Add(idx);
                 }
 
                 prevEdgeidx = idx;
@@ -63,8 +83,8 @@ namespace SVGMeshUnity.Internals
 
             if (prevEdgeidx != firstEdgeIdx)
             {
-                Edges.Add(prevEdgeidx);
-                Edges.Add(firstEdgeIdx);
+                edges.Add(prevEdgeidx);
+                edges.Add(firstEdgeIdx);
             }
         }
 

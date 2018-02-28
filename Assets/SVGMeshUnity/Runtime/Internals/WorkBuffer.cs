@@ -32,45 +32,48 @@ namespace SVGMeshUnity.Internals
             ++UsedSize;
         }
 
-        public void Push(Action<T> f)
+        public T Push()
         {
+            var val = default(T);
+            
             if (Data.Count == UsedSize)
             {
-                var val = NewForClass();
+                val = NewForClass();
                 Data.Add(val);
-                f(val);
             }
             else
             {
-                var val = Data[UsedSize];
+                val = Data[UsedSize];
+                
                 if (val == null)
                 {
                     val = NewForClass();
                     Data[UsedSize] = val;
                 }
-                f(val);
             }
 
             ++UsedSize;
+
+            return val;
         }
 
-        public void Insert(int index, Action<T> f)
+        public T Insert(int index)
         {
             if (index == UsedSize)
             {
-                Push(f);
-                return;
+                return Push();
             }
+
+            var val = default(T);
             
             if (Data.Count == UsedSize)
             {
-                var val = NewForClass();
+                val = NewForClass();
                 Data.Insert(index, val);
-                f(val);
             }
             else
             {
-                var val = Data[UsedSize];
+                val = Data[UsedSize];
                 
                 for (var i = UsedSize - 1; i >= index; --i)
                 {
@@ -83,11 +86,11 @@ namespace SVGMeshUnity.Internals
                 }
                 
                 Data[index] = val;
-
-                f(val);
             }
 
             ++UsedSize;
+
+            return val;
         }
 
         public void RemoveAt(int index)

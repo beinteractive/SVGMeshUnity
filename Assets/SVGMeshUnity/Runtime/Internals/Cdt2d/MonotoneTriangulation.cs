@@ -42,18 +42,19 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var numEdges = data.EdgeCount;
             
             var events = WorkBufferPool.Get<Event>();
-            events.NewForClass = () => new Event();
+            if (events.NewForClass == null)
+            {
+                events.NewForClass = () => new Event();
+            }
 
             //Create point events
             for (var i = 0; i < numPoints; ++i)
             {
-                events.Push(e =>
-                {
-                    e.A = data.Vertices[i];
-                    e.B = Vector2.zero;
-                    e.Type = EventType.Point;
-                    e.Index = i;
-                });
+                var e = events.Push();
+                e.A = data.Vertices[i];
+                e.B = Vector2.zero;
+                e.Type = EventType.Point;
+                e.Index = i;
             }
 
             //Create edge events
@@ -62,37 +63,37 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 var b = data.Vertices[data.GetEdgeB(i)];
                 if(a[0] < b[0])
                 {
-                    events.Push(e =>
                     {
+                        var e = events.Push();
                         e.A = a;
                         e.B = b;
                         e.Type = EventType.Start;
                         e.Index = i;
-                    });
-                    events.Push(e =>
+                    }
                     {
+                        var e = events.Push();
                         e.A = b;
                         e.B = a;
                         e.Type = EventType.End;
                         e.Index = i;
-                    });
+                    }
                 }
                 else if(a[0] > b[0])
                 {
-                    events.Push(e =>
                     {
+                        var e = events.Push();
                         e.A = b;
                         e.B = a;
                         e.Type = EventType.Start;
                         e.Index = i;
-                    });
-                    events.Push(e =>
+                    }
                     {
+                        var e = events.Push();
                         e.A = a;
                         e.B = b;
                         e.Type = EventType.End;
                         e.Index = i;
-                    });
+                    }
                 }
             }
 
@@ -107,15 +108,16 @@ namespace SVGMeshUnity.Internals.Cdt2d
             //Initialize hull
             var minX = events.Data[0].A[0] - 1f;
             var hulls = WorkBufferPool.Get<PartialHull>();
-            hulls.NewForClass = () => new PartialHull();
-            hulls.Push(h =>
+            if (hulls.NewForClass == null)
             {
-                h.A = new Vector2(minX, 1f);
-                h.B = new Vector2(minX, 0f);
-                h.Index = -1;
-                h.LowerIds.Clear();
-                h.UpperIds.Clear();
-            });
+                hulls.NewForClass = () => new PartialHull();
+            }
+            var h = hulls.Push();
+            h.A = new Vector2(minX, 1f);
+            h.B = new Vector2(minX, 0f);
+            h.Index = -1;
+            h.LowerIds.Clear();
+            h.UpperIds.Clear();
 
             //Process events in order
             var numEvents = events.UsedSize;
@@ -260,15 +262,13 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var upperIds = hull.UpperIds;
             var x = upperIds[upperIds.Count - 1];
             hull.UpperIds = new List<int>() { x };
-            hulls.Insert(splitIdx + 1, h =>
-            {
-                h.A = e.A;
-                h.B = e.B;
-                h.Index = e.Index;
-                h.LowerIds.Clear();
-                h.LowerIds.Add(x);
-                h.UpperIds = upperIds;
-            });
+            var h = hulls.Insert(splitIdx + 1);
+            h.A = e.A;
+            h.B = e.B;
+            h.Index = e.Index;
+            h.LowerIds.Clear();
+            h.LowerIds.Add(x);
+            h.UpperIds = upperIds;
 
             if (Verbose)
             {
