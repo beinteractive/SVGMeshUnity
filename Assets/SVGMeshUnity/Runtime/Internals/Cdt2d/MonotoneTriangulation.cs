@@ -39,7 +39,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
         public void BuildTriangles(MeshData data)
         {
             var numPoints = data.Vertices.Count;
-            var numEdges = data.EdgeCount;
+            var numEdges = data.Edges.Count;
 
             data.Triangles.Capacity = numPoints * 3;
             
@@ -60,9 +60,11 @@ namespace SVGMeshUnity.Internals.Cdt2d
             }
 
             //Create edge events
-            for(var i=0; i<numEdges; ++i) {
-                var a = data.Vertices[data.GetEdgeA(i)];
-                var b = data.Vertices[data.GetEdgeB(i)];
+            for(var i=0; i<numEdges; ++i)
+            {
+                var edge = data.Edges[i];
+                var a = data.Vertices[edge.x];
+                var b = data.Vertices[edge.y];
                 if(a.x < b.x)
                 {
                     {

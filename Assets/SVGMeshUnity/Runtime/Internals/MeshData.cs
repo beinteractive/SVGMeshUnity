@@ -9,19 +9,14 @@ namespace SVGMeshUnity.Internals
         public MeshData()
         {
             Vertices = new List<Vector3>();
-            Edges = new List<int>();
+            Edges = new List<Vector2Int>();
             Triangles = new List<int>();
             VertexIndices = new Hashtable();
         }
         
         public List<Vector3> Vertices { get; private set; }
-        public List<int> Edges { get; private set; }
+        public List<Vector2Int> Edges { get; private set; }
         public List<int> Triangles { get; private set; }
-        
-        public int EdgeCount
-        {
-            get { return Edges.Count / 2; }
-        }
 
         private Hashtable VertexIndices;
 
@@ -74,8 +69,7 @@ namespace SVGMeshUnity.Internals
                 }
                 else
                 {
-                    edges.Add(prevEdgeidx);
-                    edges.Add(idx);
+                    edges.Add(new Vector2Int(prevEdgeidx, idx));
                 }
 
                 prevEdgeidx = idx;
@@ -83,19 +77,8 @@ namespace SVGMeshUnity.Internals
 
             if (prevEdgeidx != firstEdgeIdx)
             {
-                edges.Add(prevEdgeidx);
-                edges.Add(firstEdgeIdx);
+                edges.Add(new Vector2Int(prevEdgeidx, firstEdgeIdx));
             }
-        }
-
-        public int GetEdgeA(int i)
-        {
-            return Edges[i * 2 + 0];
-        }
-
-        public int GetEdgeB(int i)
-        {
-            return Edges[i * 2 + 1];
         }
 
         public void Flip()
