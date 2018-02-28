@@ -32,14 +32,16 @@ namespace SVGMeshUnity.Internals.Cdt2d
             public Vector2 A;
             public Vector2 B;
             public int Index;
-            public List<int> LowerIds = new List<int>();
-            public List<int> UpperIds = new List<int>();
+            public WorkBuffer<int> LowerIds = new WorkBuffer<int>(8);
+            public WorkBuffer<int> UpperIds = new WorkBuffer<int>(8);
         }
 
         public void BuildTriangles(MeshData data)
         {
             var numPoints = data.Vertices.Count;
             var numEdges = data.EdgeCount;
+
+            data.Triangles.Capacity = numPoints * 3;
             
             var events = WorkBufferPool.Get<Event>();
             if (events.NewForClass == null)
@@ -61,7 +63,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             for(var i=0; i<numEdges; ++i) {
                 var a = data.Vertices[data.GetEdgeA(i)];
                 var b = data.Vertices[data.GetEdgeB(i)];
-                if(a[0] < b[0])
+                if(a.x < b.x)
                 {
                     {
                         var e = events.Push();
@@ -78,7 +80,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                         e.Index = i;
                     }
                 }
-                else if(a[0] > b[0])
+                else if(a.x > b.x)
                 {
                     {
                         var e = events.Push();
@@ -106,7 +108,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             }
 
             //Initialize hull
-            var minX = events.Data[0].A[0] - 1f;
+            var minX = events.Data[0].A.x - 1f;
             var hulls = WorkBufferPool.Get<PartialHull>();
             if (hulls.NewForClass == null)
             {
@@ -161,29 +163,33 @@ namespace SVGMeshUnity.Internals.Cdt2d
         //  2. sorted by type  (point < end < start)
         //  3. segments sorted by winding order
         //  4. sorted by index
-        private int CompareEvent(Event a, Event b)
+        private class EventComparer : IComparer<Event>
         {
-            var d = 0;
-
-            d = Sign(a.A[0] - b.A[0]);
-            if (d != 0) return d;
-            
-            d = Sign(a.A[1] - b.A[1]);
-            if (d != 0) return d;
-
-            d = a.Type - b.Type;
-            if (d != 0) return d;
-            
-            if (a.Type != EventType.Point)
+            public int Compare(Event a, Event b)
             {
-                d = Sign(Robust.Orientation(a.A, a.B, b.B));
+                var d = 0;
+
+                d = Sign(a.A.x - b.A.x);
                 if (d != 0) return d;
+            
+                d = Sign(a.A.y - b.A.y);
+                if (d != 0) return d;
+
+                d = a.Type - b.Type;
+                if (d != 0) return d;
+            
+                if (a.Type != EventType.Point)
+                {
+                    d = Sign(Robust.Orientation(a.A, a.B, b.B));
+                    if (d != 0) return d;
+                }
+
+                return a.Index - b.Index;
             }
-
-            return a.Index - b.Index;
         }
+        private static readonly EventComparer CompareEvent = new EventComparer();
 
-        private int Sign(float n)
+        private static int Sign(float n)
         {
             if (n < 0f)
             {
@@ -209,41 +215,43 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 //Insert p into lower hull
                 {
                     var lowerIds = hull.LowerIds;
-                    var m = lowerIds.Count;
-                    while (m > 1 && Robust.Orientation(points[lowerIds[m - 2]], points[lowerIds[m - 1]], p) > 0f)
+                    var m = lowerIds.UsedSize;
+                    var lowerIdsData = lowerIds.Data;
+                    while (m > 1 && Robust.Orientation(points[lowerIdsData[m - 2]], points[lowerIdsData[m - 1]], p) > 0f)
                     {
-                        cells.Add(lowerIds[m - 1]);
-                        cells.Add(lowerIds[m - 2]);
+                        cells.Add(lowerIdsData[m - 1]);
+                        cells.Add(lowerIdsData[m - 2]);
                         cells.Add(idx);
                         m -= 1;
                     }
 
-                    if (m < lowerIds.Count)
+                    if (m < lowerIds.UsedSize)
                     {
-                        lowerIds.RemoveRange(m, lowerIds.Count - m);
+                        lowerIds.RemoveLast(lowerIds.UsedSize - m);
                     }
 
-                    lowerIds.Add(idx);
+                    lowerIds.Push(ref idx);
                 }
 
                 //Insert p into upper hull
                 {
                     var upperIds = hull.UpperIds;
-                    var m = upperIds.Count;
-                    while (m > 1 && Robust.Orientation(points[upperIds[m - 2]], points[upperIds[m - 1]], p) < 0f)
+                    var m = upperIds.UsedSize;
+                    var upperIdsData = upperIds.Data;
+                    while (m > 1 && Robust.Orientation(points[upperIdsData[m - 2]], points[upperIdsData[m - 1]], p) < 0f)
                     {
-                        cells.Add(upperIds[m - 2]);
-                        cells.Add(upperIds[m - 1]);
+                        cells.Add(upperIdsData[m - 2]);
+                        cells.Add(upperIdsData[m - 1]);
                         cells.Add(idx);
                         m -= 1;
                     }
 
-                    if (m < upperIds.Count)
+                    if (m < upperIds.UsedSize)
                     {
-                        upperIds.RemoveRange(m, upperIds.Count - m);
+                        upperIds.RemoveLast(upperIds.UsedSize - m);
                     }
 
-                    upperIds.Add(idx);
+                    upperIds.Push(ref idx);
                 }
             }
 
@@ -260,14 +268,15 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var splitIdx = BinarySearch.LE(hulls.Data, e, FindSplit, 0, hulls.UsedSize - 1);
             var hull = hulls.Data[splitIdx];
             var upperIds = hull.UpperIds;
-            var x = upperIds[upperIds.Count - 1];
-            hull.UpperIds = new List<int>() { x };
+            var x = upperIds.Data[upperIds.UsedSize - 1];
+            hull.UpperIds = new WorkBuffer<int>(8);
+            hull.UpperIds.Push(ref x);
             var h = hulls.Insert(splitIdx + 1);
             h.A = e.A;
             h.B = e.B;
             h.Index = e.Index;
             h.LowerIds.Clear();
-            h.LowerIds.Add(x);
+            h.LowerIds.Push(ref x);
             h.UpperIds = upperIds;
 
             if (Verbose)
@@ -307,7 +316,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
         {
             var d = 0;
             
-            if (hull.A[0] < edge.A[0])
+            if (hull.A.x < edge.A.x)
             {
                 d = Sign(Robust.Orientation(hull.A, hull.B, edge.A));
             } else
@@ -317,7 +326,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
             if (d != 0) return d;
             
-            if (edge.B[0] < hull.B[0])
+            if (edge.B.x < hull.B.x)
             {
                 d = Sign(Robust.Orientation(hull.A, hull.B, edge.B));
             } else
@@ -352,9 +361,9 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 .Aggregate("", (_, s) => _ + s + "\n"));
         }
 
-        private string ToString(List<int> list)
+        private string ToString(WorkBuffer<int> list)
         {
-            return string.Join(", ", list.Select(_ => _.ToString()).ToArray());
+            return string.Join(", ", list.Data.Take(list.UsedSize).Select(_ => _.ToString()).ToArray());
         }
 
         #endregion

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace SVGMeshUnity.Internals.Cdt2d
 {
@@ -7,7 +6,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
     {
         // https://github.com/mikolalysenko/binary-search-bounds
 
-        public static int GE<G, E>(List<G> a, E y, Func<G, E, int> c, int l, int h)
+        public static int GE<G, E>(G[] a, E y, Func<G, E, int> c, int l, int h)
         {
             var i = h + 1;
             while (l <= h)
@@ -28,7 +27,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             return i;
         }
 
-        public static int GT<G, E>(List<G> a, E y, Func<G, E, int> c, int l, int h)
+        public static int GT<G, E>(G[] a, E y, Func<G, E, int> c, int l, int h)
         {
             var i = h + 1;
             while (l <= h)
@@ -49,7 +48,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             return i;
         }
 
-        public static int LT<G, E>(List<G> a, E y, Func<G, E, int> c, int l, int h)
+        public static int LT<G, E>(G[] a, E y, Func<G, E, int> c, int l, int h)
         {
             var i = l - 1;
             while (l <= h)
@@ -70,7 +69,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             return i;
         }
 
-        public static int LE<G, E>(List<G> a, E y, Func<G, E, int> c, int l, int h)
+        public static int LE<G, E>(G[] a, E y, Func<G, E, int> c, int l, int h)
         {
             var i = l - 1;
             while (l <= h)
@@ -91,7 +90,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             return i;
         }
 
-        public static int EQ<G, E>(List<G> a, E y, Func<G, E, int> c, int l, int h)
+        public static int EQ<G, E>(G[] a, E y, Func<G, E, int> c, int l, int h)
         {
             while (l <= h)
             {

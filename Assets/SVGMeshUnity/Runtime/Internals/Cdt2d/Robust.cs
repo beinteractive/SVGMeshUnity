@@ -18,8 +18,8 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
         public static float Orientation(Vector2 a, Vector2 b, Vector2 c)
         {
-            var l = (a[1] - c[1]) * (b[0] - c[0]);
-            var r = (a[0] - c[0]) * (b[1] - c[1]);
+            var l = (a.y - c.y) * (b.x - c.x);
+            var r = (a.x - c.x) * (b.y - c.y);
             var det = l - r;
             var s = 0f;
             if (l > 0)
@@ -59,8 +59,8 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var m1 = b;
             var m2 = c;
 
-            var p = Sum(Sum(Prod(m1[1], m2[0]), Prod(-m2[1], m1[0])), Sum(Prod(m0[1], m1[0]), Prod(-m1[1], m0[0])));
-            var n = Sum(Prod(m0[1], m2[0]), Prod(-m2[1], m0[0]));
+            var p = Sum(Sum(Prod(m1.y, m2.x), Prod(-m2.y, m1.x)), Sum(Prod(m0.y, m1.x), Prod(-m1.y, m0.x)));
+            var n = Sum(Prod(m0.y, m2.x), Prod(-m2.y, m0.x));
             var d = Sub(p, n);
             
             return d[d.Length - 1];

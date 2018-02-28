@@ -22,7 +22,7 @@ namespace SVGMeshUnity.Internals
                 }
             }
             
-            return buf ?? new WorkBuffer<T>(32);
+            return buf ?? new WorkBuffer<T>();
         }
 
         public void Get<T>(ref WorkBuffer<T> buf)

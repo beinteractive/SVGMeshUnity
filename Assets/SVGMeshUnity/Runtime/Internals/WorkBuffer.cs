@@ -7,123 +7,126 @@ namespace SVGMeshUnity.Internals
 {
     public class WorkBuffer<T>
     {
-        public WorkBuffer(int capacity)
+        public WorkBuffer(int size = 32)
         {
-            Data = new List<T>();
-            Data.AddRange(Enumerable.Repeat(default(T), capacity));
+            GrowSize = size;
+            PrivateData = new T[size];
         }
         
-        public List<T> Data { get; private set; }
-        public int UsedSize { get; private set; }
+        public T[] Data
+        {
+            get { return PrivateData; }
+        }
+        public int UsedSize
+        {
+            get { return PrivateUsedSize; }
+        }
 
         public Func<T> NewForClass;
 
+        private int GrowSize;
+        private T[] PrivateData;
+        private int PrivateUsedSize;
+
+        private void Grow()
+        {
+            var newPrivateData = new T[PrivateData.Length + GrowSize];
+            PrivateData.CopyTo(newPrivateData, 0);
+            PrivateData = newPrivateData;
+        }
+
+        private void GrowIfNeeded()
+        {
+            if (PrivateData.Length == PrivateUsedSize)
+            {
+                Grow();
+            }
+        }
+
         public void Push(ref T val)
         {
-            if (Data.Count == UsedSize)
-            {
-                Data.Add(val);
-            }
-            else
-            {
-                Data[UsedSize] = val;
-            }
-
-            ++UsedSize;
+            GrowIfNeeded();
+            PrivateData[PrivateUsedSize] = val;
+            ++PrivateUsedSize;
         }
 
         public T Push()
         {
-            var val = default(T);
-            
-            if (Data.Count == UsedSize)
+            GrowIfNeeded();
+
+            var val = PrivateData[PrivateUsedSize];
+
+            if (val == null)
             {
                 val = NewForClass();
-                Data.Add(val);
-            }
-            else
-            {
-                val = Data[UsedSize];
-                
-                if (val == null)
-                {
-                    val = NewForClass();
-                    Data[UsedSize] = val;
-                }
+                PrivateData[PrivateUsedSize] = val;
             }
 
-            ++UsedSize;
+            ++PrivateUsedSize;
 
             return val;
         }
 
         public T Insert(int index)
         {
-            if (index == UsedSize)
+            if (index == PrivateUsedSize)
             {
                 return Push();
             }
 
-            var val = default(T);
-            
-            if (Data.Count == UsedSize)
+            GrowIfNeeded();
+
+            var val = PrivateData[PrivateUsedSize];
+
+            for (var i = PrivateUsedSize - 1; i >= index; --i)
+            {
+                PrivateData[i + 1] = PrivateData[i];
+            }
+
+            if (val == null)
             {
                 val = NewForClass();
-                Data.Insert(index, val);
-            }
-            else
-            {
-                val = Data[UsedSize];
-                
-                for (var i = UsedSize - 1; i >= index; --i)
-                {
-                    Data[i + 1] = Data[i];
-                }
-
-                if (val == null)
-                {
-                    val = NewForClass();
-                }
-                
-                Data[index] = val;
             }
 
-            ++UsedSize;
+            PrivateData[index] = val;
+
+            ++PrivateUsedSize;
 
             return val;
         }
 
         public void RemoveAt(int index)
         {
-            var old = Data[index];
+            var old = PrivateData[index];
             
-            for (var i = index; i < UsedSize - 1; ++i)
+            for (var i = index; i < PrivateUsedSize - 1; ++i)
             {
-                Data[i] = Data[i + 1];
+                PrivateData[i] = PrivateData[i + 1];
             }
 
-            Data[UsedSize - 1] = old;
+            PrivateData[PrivateUsedSize - 1] = old;
 
-            --UsedSize;
+            --PrivateUsedSize;
         }
 
-        public void Sort(Comparison<T> c)
+        public void Sort(IComparer<T> c)
         {
-            if (Data.Count > UsedSize)
-            {
-                Data.RemoveRange(UsedSize, Data.Count - UsedSize);
-            }
-            Data.Sort(c);
+            Array.Sort(PrivateData, 0, PrivateUsedSize, c);
+        }
+
+        public void RemoveLast(int n)
+        {
+            PrivateUsedSize -= n;
         }
 
         public void Clear()
         {
-            UsedSize = 0;
+            PrivateUsedSize = 0;
         }
 
         public void Dump()
         {
-            Debug.LogFormat("{0}{1}", UsedSize, Data.Select(_ => string.Format("{0:x}",_ != null ? _.GetHashCode() : 0)).Aggregate("", (_, s) => _ + ", " + s));
+            Debug.LogFormat("{0}{1}", PrivateUsedSize, PrivateData.Select(_ => string.Format("{0:x}",_ != null ? _.GetHashCode() : 0)).Aggregate("", (_, s) => _ + ", " + s));
         }
     }
 }

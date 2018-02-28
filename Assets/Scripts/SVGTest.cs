@@ -1,6 +1,5 @@
 ﻿using SVGMeshUnity;
 using UnityEngine;
-using UnityEngine.Profiling;
 
 public class SVGTest : MonoBehaviour
 {
@@ -25,14 +24,17 @@ public class SVGTest : MonoBehaviour
 
 	[SerializeField] private SVGMesh Mesh;
 
+	private SVGData SVG;
+
+	void Start()
+	{
+		SVG = new SVGData();
+		SVG.Path(SVG_PATH);
+		// Debug.Log(SVG.Dump());
+	}
+
 	void Update()
 	{
-		var svg = new SVGData();
-		
-		svg.Path(SVG_PATH);
-
-		// Debug.Log(svg.Dump());
-
-		Mesh.Fill(svg);
+		Mesh.Fill(SVG);
 	}
 }
