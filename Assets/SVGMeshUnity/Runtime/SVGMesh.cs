@@ -10,6 +10,11 @@ namespace SVGMeshUnity
 
         public float Scale = 1f;
         
+        public bool Delaunay = true;
+        public bool Interior = true;
+        public bool Exterior = false;
+        public bool Infinity = false;
+        
         private static WorkBufferPool WorkBufferPool = new WorkBufferPool();
         
         private MeshData MeshData = new MeshData();
@@ -36,6 +41,10 @@ namespace SVGMeshUnity
             BezierToVertex.GetContours(svg, MeshData);
             
             // triangulate mesh
+            Triangulation.Delaunay = Delaunay;
+            Triangulation.Interior = Interior;
+            Triangulation.Exterior = Exterior;
+            Triangulation.Infinity = Infinity;
             Triangulation.BuildTriangles(MeshData);
             
             if (Mesh == null)

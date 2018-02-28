@@ -12,11 +12,12 @@
         public WorkBufferPool WorkBufferPool;
 
         private MonotoneTriangulation MonotoneTriangulation = new MonotoneTriangulation();
+        private DelaunayRefine DelaunayRefine = new DelaunayRefine();
 
         public void BuildTriangles(MeshData data)
         {
             //Handle trivial case
-            if((!Interior && !Exterior) || data.Vertices.Count == 0)
+            if ((!Interior && !Exterior) || data.Vertices.Count == 0)
             {
                 return;
             }
@@ -28,21 +29,17 @@
             //If delaunay refinement needed, then improve quality by edge flipping
             if (Delaunay || Interior != Exterior || Infinity)
             {
-                /**
                 //Index all of the cells to support fast neighborhood queries
-                var triangulation = makeIndex(points.length, canonicalizeEdges(edges))
-                for (var i = 0; i < cells.length; ++i)
-                {
-                    var f = cells[i]
-                    triangulation.addTriangle(f[0], f[1], f[2])
-                }
+                var triangles = new Triangles(data);
 
                 //Run edge flipping
-                if (delaunay)
+                if (Delaunay)
                 {
-                    delaunayFlip(points, triangulation)
+                    DelaunayRefine.WorkBufferPool = WorkBufferPool;
+                    DelaunayRefine.RefineTriangles(triangles);
                 }
 
+                /**
                 //Filter points
                 if (!exterior)
                 {
@@ -57,10 +54,10 @@
                     return filterTriangulation(triangulation, 0, infinity)
                 }
                 else
-                {
-                    return triangulation.cells()
-                }
                 /**/
+                {
+                    triangles.Fill(data.Triangles);
+                }
 
             }
         }

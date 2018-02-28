@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace SVGMeshUnity.Internals
@@ -96,6 +97,11 @@ namespace SVGMeshUnity.Internals
             m.SetTriangles(Triangles, 0);
             m.RecalculateBounds();
             m.RecalculateNormals();
+        }
+
+        public void DumpTriangles()
+        {
+            Debug.Log(Triangles.Aggregate("", (_, i) => _ + i.ToString() + "\n"));
         }
     }
 }

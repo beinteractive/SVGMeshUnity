@@ -1,13 +1,12 @@
 ﻿using NUnit.Framework;
 using UnityEngine;
-using UnityEditor;
 
 namespace SVGMeshUnity.Internals.Cdt2d
 {
     public class RobustTests
     {
         [Test]
-        public void OrientationWorks()
+        public void Orientation()
         {
             Assert.IsTrue(Robust.Orientation(
                               new Vector2(0.1f, 0.1f),
@@ -58,6 +57,50 @@ namespace SVGMeshUnity.Internals.Cdt2d
                               ) < 0f, "x=" + x);
                 x *= 10f;
             }
+        }
+
+        [Test]
+        public void InSphere()
+        {
+            Assert.IsTrue(Robust.InSphere(
+                              new Vector2(0f, -1f),
+                              new Vector2(1f, 0f),
+                              new Vector2(0f, 1f),
+                              new Vector2(-0.5f, 0f)) > 0f);
+
+            Assert.IsTrue(Robust.InSphere(
+                              new Vector2(0f, -1f),
+                              new Vector2(1f, 0f),
+                              new Vector2(0f, 1f),
+                              new Vector2(-1f, 0f)) == 0f);
+
+            Assert.IsTrue(Robust.InSphere(
+                              new Vector2(0f, -1f),
+                              new Vector2(1f, 0f),
+                              new Vector2(0f, 1f),
+                              new Vector2(-1.5f, 0f)) < 0f);
+
+            var x = 1e-4f;
+            for(var i = 0; i < 8; ++i)
+            {
+                Assert.IsTrue(Robust.InSphere(
+                                  new Vector2(0f, x),
+                                  new Vector2(-x, -x),
+                                  new Vector2(x, -x),
+                                  new Vector2(0f, 0f)) > 0f, "sphere test:" + x);
+                Assert.IsTrue(Robust.InSphere(
+                                  new Vector2(0f, x),
+                                  new Vector2(-x, -x),
+                                  new Vector2(x, -x),
+                                  new Vector2(0f, 2f * x)) < 0f, "sphere test:" + x);
+                Assert.IsTrue(Robust.InSphere(
+                                  new Vector2(0f, x),
+                                  new Vector2(-x, -x),
+                                  new Vector2(x, -x),
+                                  new Vector2(0f, x)) == 0f, "sphere test:" + x);
+                x *= 10f;
+            }
+            
         }
     }
 }

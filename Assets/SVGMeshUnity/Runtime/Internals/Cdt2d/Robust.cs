@@ -6,15 +6,17 @@ namespace SVGMeshUnity.Internals.Cdt2d
     public static class Robust
     {
         // https://github.com/mikolalysenko/robust-orientation
+        // https://github.com/mikolalysenko/robust-in-sphere
         // https://github.com/mikolalysenko/robust-sum
         // https://github.com/mikolalysenko/robust-subtract
+        // https://github.com/mikolalysenko/robust-scale
         // https://github.com/mikolalysenko/two-product
+        // https://github.com/mikolalysenko/two-sum
 
         private static readonly float Epsilon = 1.1102230246251565e-16f;
         private static readonly float Errbound3 = (3.0f + 16.0f * Epsilon) * Epsilon;
 
         private static readonly float Splitter = +(Mathf.Pow(2f, 27f) + 1.0f);
-
 
         public static float Orientation(Vector2 a, Vector2 b, Vector2 c)
         {
@@ -59,14 +61,49 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var m1 = b;
             var m2 = c;
 
-            var p = Sum(Sum(Prod(m1.y, m2.x), Prod(-m2.y, m1.x)), Sum(Prod(m0.y, m1.x), Prod(-m1.y, m0.x)));
-            var n = Sum(Prod(m0.y, m2.x), Prod(-m2.y, m0.x));
+            var p = Sum(Sum(TwoProd(m1.y, m2.x), TwoProd(-m2.y, m1.x)), Sum(TwoProd(m0.y, m1.x), TwoProd(-m1.y, m0.x)));
+            var n = Sum(TwoProd(m0.y, m2.x), TwoProd(-m2.y, m0.x));
             var d = Sub(p, n);
             
             return d[d.Length - 1];
         }
 
-        private static float[] Prod(float a, float b)
+        public static float InSphere(Vector2 m0, Vector2 m1, Vector2 m2, Vector2 m3)
+        {
+            var w0 = Sum(TwoProd(m0[0], m0[0]), TwoProd(m0[1], m0[1]));
+            var w0m1 = Scale(w0, m1[0]);
+            var w0m2 = Scale(w0, m2[0]);
+            var w0m3 = Scale(w0, m3[0]);
+            var w1 = Sum(TwoProd(m1[0], m1[0]), TwoProd(m1[1], m1[1]));
+            var w1m0 = Scale(w1, m0[0]);
+            var w1m2 = Scale(w1, m2[0]);
+            var w1m3 = Scale(w1, m3[0]);
+            var w2 = Sum(TwoProd(m2[0], m2[0]), TwoProd(m2[1], m2[1]));
+            var w2m0 = Scale(w2, m0[0]);
+            var w2m1 = Scale(w2, m1[0]);
+            var w2m3 = Scale(w2, m3[0]);
+            var w3 = Sum(TwoProd(m3[0], m3[0]), TwoProd(m3[1], m3[1]));
+            var w3m0 = Scale(w3, m0[0]);
+            var w3m1 = Scale(w3, m1[0]);
+            var w3m2 = Scale(w3, m2[0]);
+            var p =
+                Sum(
+                    Sum(Scale(Sub(w3m2, w2m3), m1[1]),
+                        Sum(Scale(Sub(w3m1, w1m3), -m2[1]), Scale(Sub(w2m1, w1m2), m3[1]))),
+                    Sum(Scale(Sub(w3m1, w1m3), m0[1]),
+                        Sum(Scale(Sub(w3m0, w0m3), -m1[1]), Scale(Sub(w1m0, w0m1), m3[1]))));
+            var n =
+                Sum(
+                    Sum(Scale(Sub(w3m2, w2m3), m0[1]),
+                        Sum(Scale(Sub(w3m0, w0m3), -m2[1]), Scale(Sub(w2m0, w0m2), m3[1]))),
+                    Sum(Scale(Sub(w2m1, w1m2), m0[1]),
+                        Sum(Scale(Sub(w2m0, w0m2), -m1[1]), Scale(Sub(w1m0, w0m1), m2[1]))));
+            var d = Sub(p, n);
+
+            return d[d.Length - 1];
+        }
+
+        private static float[] TwoProd(float a, float b, float[] result = null)
         {
             var x = a * b;
 
@@ -85,10 +122,31 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var err3 = err2 - (ahi * blo);
 
             var y = alo * blo - err3;
-
+            
+            if (result != null)
+            {
+                result[0] = y;
+                result[1] = x;
+                return result;
+            }
             return new[] { y, x };
         }
 
+        private static float[] TwoSum(float a, float b, float[] result = null)
+        {
+            var x = a + b;
+            var bv = x - a;
+            var av = x - bv;
+            var br = b - bv;
+            var ar = a - av;
+            if (result != null)
+            {
+                result[0] = ar + br;
+                result[1] = x;
+                return result;
+            }
+            return new[] { ar + br, x };
+        }
         private static float[] Sum(float[] e, float[] f)
         {
             var ne = e.Length;
@@ -455,6 +513,76 @@ namespace SVGMeshUnity.Internals.Cdt2d
             if (q1 != 0f)
             {
                 g[count++] = q1;
+            }
+
+            if (count == 0)
+            {
+                g[count++] = 0.0f;
+            }
+
+            if (g.Length != count)
+            {
+                var g_ = new float[count];
+                for (var i = 0; i < count; ++i)
+                {
+                    g_[i] = g[i];
+                }
+
+                g = g_;
+            }
+
+            return g;
+        }
+
+        private static float[] Scale(float[] e, float scale)
+        {
+            var n = e.Length;
+            if (n == 1)
+            {
+                var ts = TwoProd(e[0], scale);
+                if (ts[0] != 0f)
+                {
+                    return ts;
+                }
+
+                return new[] {ts[1]};
+            }
+
+            var g = new float[2 * n];
+            var q = new[] {0.1f, 0.1f};
+            var t = new[] {0.1f, 0.1f};
+            var count = 0;
+            TwoProd(e[0], scale, q);
+            if (q[0] != 0f)
+            {
+                g[count++] = q[0];
+            }
+
+            for (var i = 1; i < n; ++i)
+            {
+                TwoProd(e[i], scale, t);
+                var pq = q[1];
+                TwoSum(pq, t[0], q);
+                if (q[0] != 0f)
+                {
+                    g[count++] = q[0];
+                }
+
+                var a = t[1];
+                var b = q[1];
+                var x = a + b;
+                var bv = x - a;
+                var y = b - bv;
+                q[1] = x;
+                if (y != 0f)
+                {
+                    g[count++] = y;
+                }
+            }
+
+            if (q[1] != 0f)
+            {
+                g[count++] = q[1];
             }
 
             if (count == 0)

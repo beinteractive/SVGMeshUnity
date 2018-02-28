@@ -67,6 +67,13 @@ namespace SVGMeshUnity.Internals
             return val;
         }
 
+        public T Pop()
+        {
+            var val = PrivateData[PrivateUsedSize - 1];
+            --PrivateUsedSize;
+            return val;
+        }
+
         public T Insert(int index)
         {
             if (index == PrivateUsedSize)
