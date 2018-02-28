@@ -10,7 +10,7 @@ namespace SVGMeshUnity
 
         public float Scale = 1f;
         
-        public bool Delaunay = true;
+        public bool Delaunay = false;
         public bool Interior = true;
         public bool Exterior = false;
         public bool Infinity = false;

@@ -216,6 +216,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Scale: 10
+  Delaunay: 0
+  Interior: 1
+  Exterior: 0
+  Infinity: 0
 --- !u!23 &844179447
 MeshRenderer:
   m_ObjectHideFlags: 0
