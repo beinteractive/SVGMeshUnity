@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using SVGMeshUnity.Internals;
 using UnityEngine;
@@ -352,7 +353,6 @@ namespace SVGMeshUnity
         #region Path Parser
         
         private static readonly Regex Segment = new Regex("([astvzqmhlc])([^astvzqmhlc]*)", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-        private static readonly Regex Number = new Regex("-?[0-9]*\\.?[0-9]+(?:e[-+]?\\d+)?", RegexOptions.IgnoreCase | RegexOptions.Multiline);
         private static readonly Dictionary<string ,int> ArgumentLengthes = new Dictionary<string, int>()
         {
             { "a", 7 }, { "c", 6 }, { "h", 1 }, { "l", 2 }, { "m", 2 }, { "q", 4 }, { "s", 4 }, { "t", 2 }, { "v", 1 }, { "z", 0 }
@@ -476,17 +476,70 @@ namespace SVGMeshUnity
 
         private void ParseArgs(string s, ref float[] args, out int numArgs)
         {
-            var matches = Number.Matches(s);
-            numArgs = matches.Count;
+            numArgs = 0;
 
-            if (args.Length < numArgs)
+            var l = s.Length;
+            var buf = new StringBuilder(16);
+            var lastIsE = false;
+            for (var i = 0; i < l; ++i)
             {
-                args = new float[numArgs];
-            }
-            
-            for (var i = 0; i < numArgs; ++i)
-            {
-                args[i] = float.Parse(matches[i].Value);
+                var isBreak = false;
+                var c = s[i];
+                switch (c)
+                {
+                    case '0':
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '5':
+                    case '6':
+                    case '7':
+                    case '8':
+                    case '9':
+                    case '.':
+                        buf.Append(c);
+                        lastIsE = false;
+                        break;
+                    case 'e':
+                        buf.Append(c);
+                        lastIsE = true;
+                        break;
+                    case '+':
+                    case '-':
+                        if (buf.Length > 0 && !lastIsE)
+                        {
+                            isBreak = true;
+                            --i;
+                        }
+                        else
+                        {
+                            buf.Append(c);
+                            lastIsE = false;
+                        }
+                        break;
+                    default:
+                        isBreak = true;
+                        break;
+                }
+
+                if (isBreak || i == l - 1)
+                {
+                    if (buf.Length > 0)
+                    {
+                        if (args.Length == numArgs)
+                        {
+                            var newArgs = new float[args.Length + 32];
+                            args.CopyTo(newArgs, 0);
+                            args = newArgs;
+                        }
+
+                        args[numArgs] = float.Parse(buf.ToString());
+                        numArgs++;
+                        buf.Length = 0;
+                        lastIsE = false;
+                    }
+                }
             }
         }
 
