@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace SVGMeshUnity.Internals.Cdt2d
 {
@@ -17,6 +16,31 @@ namespace SVGMeshUnity.Internals.Cdt2d
         private static readonly float Errbound3 = (3.0f + 16.0f * Epsilon) * Epsilon;
 
         private static readonly float Splitter = +(Mathf.Pow(2f, 27f) + 1.0f);
+
+        private static float[][] BufferPool = new float[32][];
+        private static int BufferPoolSize = 0;
+
+        private static float[] GetTemporaryBuffer()
+        {
+            if (BufferPoolSize > 0)
+            {
+                return BufferPool[--BufferPoolSize];
+            }
+            return new float[16];
+        }
+
+        private static void ReleaseTemporaryBuffer(ref float[] buf)
+        {
+            if (BufferPool.Length == BufferPoolSize)
+            {
+                var newBufferPool = new float[BufferPool.Length + 32][];
+                BufferPool.CopyTo(newBufferPool, 0);
+                BufferPool = newBufferPool;
+            }
+
+            BufferPool[BufferPoolSize++] = buf;
+            buf = null;
+        }
 
         public static float Orientation(Vector2 a, Vector2 b, Vector2 c)
         {
@@ -60,50 +84,308 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var m0 = a;
             var m1 = b;
             var m2 = c;
-
-            var p = Sum(Sum(TwoProd(m1.y, m2.x), TwoProd(-m2.y, m1.x)), Sum(TwoProd(m0.y, m1.x), TwoProd(-m1.y, m0.x)));
-            var n = Sum(TwoProd(m0.y, m2.x), TwoProd(-m2.y, m0.x));
-            var d = Sub(p, n);
             
-            return d[d.Length - 1];
+            var sL = GetTemporaryBuffer();
+            var sR = GetTemporaryBuffer();
+
+            var p = GetTemporaryBuffer();
+            var n = GetTemporaryBuffer();
+            var d = GetTemporaryBuffer();
+
+            var pN = 0;
+            var nN = 0;
+            var dN = 0;
+
+            var pL = GetTemporaryBuffer();
+            var pR = GetTemporaryBuffer();
+
+            var pLN = 0;
+            var pRN = 0;
+
+            TwoProd( m1.y, m2.x, sL);
+            TwoProd(-m2.y, m1.x, sR);
+            Sum(sL, 2, sR, 2, pL, out pLN);
+
+            TwoProd( m0.y, m1.x, sL);
+            TwoProd(-m1.y, m0.x, sR);
+            Sum(sL, 2, sR, 2, pR, out pRN);
+            
+            Sum(pL, pLN, pR, pRN, p, out pN);
+            
+            ReleaseTemporaryBuffer(ref pL);
+            ReleaseTemporaryBuffer(ref pR);
+
+            TwoProd( m0.y, m2.x, sL);
+            TwoProd(-m2.y, m0.x, sR);
+            Sum(sL, 2, sR, 2, n, out nN);
+            
+            ReleaseTemporaryBuffer(ref sL);
+            ReleaseTemporaryBuffer(ref sR);
+            
+            Sub(p, pN, n, nN, d, out dN);
+
+            var result = d[dN - 1];
+            
+            ReleaseTemporaryBuffer(ref p);
+            ReleaseTemporaryBuffer(ref n);
+            ReleaseTemporaryBuffer(ref d);
+
+            return result;
         }
 
         public static float InSphere(Vector2 m0, Vector2 m1, Vector2 m2, Vector2 m3)
         {
-            var w0 = Sum(TwoProd(m0[0], m0[0]), TwoProd(m0[1], m0[1]));
-            var w0m1 = Scale(w0, m1[0]);
-            var w0m2 = Scale(w0, m2[0]);
-            var w0m3 = Scale(w0, m3[0]);
-            var w1 = Sum(TwoProd(m1[0], m1[0]), TwoProd(m1[1], m1[1]));
-            var w1m0 = Scale(w1, m0[0]);
-            var w1m2 = Scale(w1, m2[0]);
-            var w1m3 = Scale(w1, m3[0]);
-            var w2 = Sum(TwoProd(m2[0], m2[0]), TwoProd(m2[1], m2[1]));
-            var w2m0 = Scale(w2, m0[0]);
-            var w2m1 = Scale(w2, m1[0]);
-            var w2m3 = Scale(w2, m3[0]);
-            var w3 = Sum(TwoProd(m3[0], m3[0]), TwoProd(m3[1], m3[1]));
-            var w3m0 = Scale(w3, m0[0]);
-            var w3m1 = Scale(w3, m1[0]);
-            var w3m2 = Scale(w3, m2[0]);
-            var p =
-                Sum(
-                    Sum(Scale(Sub(w3m2, w2m3), m1[1]),
-                        Sum(Scale(Sub(w3m1, w1m3), -m2[1]), Scale(Sub(w2m1, w1m2), m3[1]))),
-                    Sum(Scale(Sub(w3m1, w1m3), m0[1]),
-                        Sum(Scale(Sub(w3m0, w0m3), -m1[1]), Scale(Sub(w1m0, w0m1), m3[1]))));
-            var n =
-                Sum(
-                    Sum(Scale(Sub(w3m2, w2m3), m0[1]),
-                        Sum(Scale(Sub(w3m0, w0m3), -m2[1]), Scale(Sub(w2m0, w0m2), m3[1]))),
-                    Sum(Scale(Sub(w2m1, w1m2), m0[1]),
-                        Sum(Scale(Sub(w2m0, w0m2), -m1[1]), Scale(Sub(w1m0, w0m1), m2[1]))));
-            var d = Sub(p, n);
+            var w = GetTemporaryBuffer();
+            var wL = GetTemporaryBuffer();
+            var wR = GetTemporaryBuffer();
 
-            return d[d.Length - 1];
+            var wN = 0;
+            
+            var w0m1 = GetTemporaryBuffer();
+            var w0m2 = GetTemporaryBuffer();
+            var w0m3 = GetTemporaryBuffer();
+            var w1m0 = GetTemporaryBuffer();
+            var w1m2 = GetTemporaryBuffer();
+            var w1m3 = GetTemporaryBuffer();
+            var w2m0 = GetTemporaryBuffer();
+            var w2m1 = GetTemporaryBuffer();
+            var w2m3 = GetTemporaryBuffer();
+            var w3m0 = GetTemporaryBuffer();
+            var w3m1 = GetTemporaryBuffer();
+            var w3m2 = GetTemporaryBuffer();
+            
+            var w0m1N = 0;
+            var w0m2N = 0;
+            var w0m3N = 0;
+            var w1m0N = 0;
+            var w1m2N = 0;
+            var w1m3N = 0;
+            var w2m0N = 0;
+            var w2m1N = 0;
+            var w2m3N = 0;
+            var w3m0N = 0;
+            var w3m1N = 0;
+            var w3m2N = 0;
+            
+            TwoProd(m0[0], m0[0], wL);
+            TwoProd(m0[1], m0[1], wR);
+            Sum(wL, 2, wR, 2, w, out wN);
+            Scale(w, wN, m1[0], w0m1, out w0m1N);
+            Scale(w, wN, m2[0], w0m2, out w0m2N);
+            Scale(w, wN, m3[0], w0m3, out w0m3N);
+            
+            TwoProd(m1[0], m1[0], wL);
+            TwoProd(m1[1], m1[1], wR);
+            Sum(wL, 2, wR, 2, w, out wN);
+            Scale(w, wN, m0[0], w1m0, out w1m0N);
+            Scale(w, wN, m2[0], w1m2, out w1m2N);
+            Scale(w, wN, m3[0], w1m3, out w1m3N);
+
+            TwoProd(m2[0], m2[0], wL);
+            TwoProd(m2[1], m2[1], wR);
+            Sum(wL, 2, wR, 2, w, out wN);
+            Scale(w, wN, m0[0], w2m0, out w2m0N);
+            Scale(w, wN, m1[0], w2m1, out w2m1N);
+            Scale(w, wN, m3[0], w2m3, out w2m3N);
+
+            TwoProd(m3[0], m3[0], wL);
+            TwoProd(m3[1], m3[1], wR);
+            Sum(wL, 2, wR, 2, w, out wN);
+            Scale(w, wN, m0[0], w3m0, out w3m0N);
+            Scale(w, wN, m1[0], w3m1, out w3m1N);
+            Scale(w, wN, m2[0], w3m2, out w3m2N);
+            
+            ReleaseTemporaryBuffer(ref wL);
+            ReleaseTemporaryBuffer(ref wR);
+            ReleaseTemporaryBuffer(ref w);
+
+            var p = GetTemporaryBuffer();
+            var n = GetTemporaryBuffer();
+            var d = GetTemporaryBuffer();
+
+            var pN = 0;
+            var nN = 0;
+            var dN = 0;
+
+            var pL = GetTemporaryBuffer();
+            var pR = GetTemporaryBuffer();
+
+            var pLN = 0;
+            var pRN = 0;
+
+            var pLLL = GetTemporaryBuffer();
+            var pLL = GetTemporaryBuffer();
+            var pLRLL = GetTemporaryBuffer();
+            var pLRL = GetTemporaryBuffer();
+            var pLRRL = GetTemporaryBuffer();
+            var pLRR = GetTemporaryBuffer();
+            var pLR = GetTemporaryBuffer();
+
+            var pLLLN = 0;
+            var pLLN = 0;
+            var pLRLLN = 0;
+            var pLRLN = 0;
+            var pLRRLN = 0;
+            var pLRRN = 0;
+            var pLRN = 0;
+            
+            Sub(w3m2, w3m2N, w2m3, w2m3N, pLLL, out pLLLN);
+            Scale(pLLL, pLLLN, m1[1], pLL, out pLLN);
+            Sub(w3m1, w3m1N, w1m3, w1m3N, pLRLL, out pLRLLN);
+            Scale(pLRLL, pLRLLN, -m2[1], pLRL, out pLRLN);
+            Sub(w2m1, w2m1N, w1m2, w1m2N, pLRRL, out pLRRLN);
+            Scale(pLRRL, pLRRLN, m3[1], pLRR, out pLRRN);
+            Sum(pLRL, pLRLN, pLRR, pLRRN, pLR, out pLRN);
+            Sum(pLL, pLLN, pLR, pLRN, pL, out pLN);
+            
+            ReleaseTemporaryBuffer(ref pLLL);
+            ReleaseTemporaryBuffer(ref pLL);
+            ReleaseTemporaryBuffer(ref pLRLL);
+            ReleaseTemporaryBuffer(ref pLRL);
+            ReleaseTemporaryBuffer(ref pLRRL);
+            ReleaseTemporaryBuffer(ref pLRR);
+            ReleaseTemporaryBuffer(ref pLR);
+
+            var pRLL = GetTemporaryBuffer();
+            var pRL = GetTemporaryBuffer();
+            var pRRLL = GetTemporaryBuffer();
+            var pRRL = GetTemporaryBuffer();
+            var pRRRL = GetTemporaryBuffer();
+            var pRRR = GetTemporaryBuffer();
+            var pRR = GetTemporaryBuffer();
+
+            var pRLLN = 0;
+            var pRLN = 0;
+            var pRRLLN = 0;
+            var pRRLN = 0;
+            var pRRRLN = 0;
+            var pRRRN = 0;
+            var pRRN = 0;
+            
+            Sub(w3m1, w3m1N, w1m3, w1m3N, pRLL, out pRLLN);
+            Scale(pRLL, pRLLN, m0[1], pRL, out pRLN);
+            Sub(w3m0, w3m0N, w0m3, w0m3N, pRRLL, out pRRLLN);
+            Scale(pRRLL, pRRLLN, -m1[1], pRRL, out pRRLN);
+            Sub(w1m0, w1m0N, w0m1, w0m1N, pRRRL, out pRRRLN);
+            Scale(pRRRL, pRRRLN, m3[1], pRRR, out pRRRN);
+            Sum(pRRL, pRRLN, pRRR, pRRRN, pRR, out pRRN);
+            Sum(pRL, pRLN, pRR, pRRN, pR, out pRN);
+            
+            ReleaseTemporaryBuffer(ref pRLL);
+            ReleaseTemporaryBuffer(ref pRL);
+            ReleaseTemporaryBuffer(ref pRRLL);
+            ReleaseTemporaryBuffer(ref pRRL);
+            ReleaseTemporaryBuffer(ref pRRRL);
+            ReleaseTemporaryBuffer(ref pRRR);
+            ReleaseTemporaryBuffer(ref pRR);
+            
+            Sum(pL, pLN, pR, pRN, p, out pN);
+            
+            ReleaseTemporaryBuffer(ref pL);
+            ReleaseTemporaryBuffer(ref pR);
+
+            var nL = GetTemporaryBuffer();
+            var nR = GetTemporaryBuffer();
+
+            var nLN = 0;
+            var nRN = 0;
+
+            var nLLL = GetTemporaryBuffer();
+            var nLL = GetTemporaryBuffer();
+            var nLRLL = GetTemporaryBuffer();
+            var nLRL = GetTemporaryBuffer();
+            var nLRRL = GetTemporaryBuffer();
+            var nLRR = GetTemporaryBuffer();
+            var nLR = GetTemporaryBuffer();
+
+            var nLLLN = 0;
+            var nLLN = 0;
+            var nLRLLN = 0;
+            var nLRLN = 0;
+            var nLRRLN = 0;
+            var nLRRN = 0;
+            var nLRN = 0;
+
+            Sub(w3m2, w3m2N, w2m3, w2m3N, nLLL, out nLLLN);
+            Scale(nLLL, nLLLN, m0[1], nLL, out nLLN);
+            Sub(w3m0, w3m0N, w0m3, w0m3N, nLRLL, out nLRLLN);
+            Scale(nLRLL, nLRLLN, -m2[1], nLRL, out nLRLN);
+            Sub(w2m0, w2m0N, w0m2, w0m2N, nLRRL, out nLRRLN);
+            Scale(nLRRL, nLRRLN, m3[1], nLRR, out nLRRN);
+            Sum(nLRL, nLRLN, nLRR, nLRRN, nLR, out nLRN);
+            Sum(nLL, nLLN, nLR, nLRN, nL, out nLN);
+            
+            ReleaseTemporaryBuffer(ref nLLL);
+            ReleaseTemporaryBuffer(ref nLL);
+            ReleaseTemporaryBuffer(ref nLRLL);
+            ReleaseTemporaryBuffer(ref nLRL);
+            ReleaseTemporaryBuffer(ref nLRRL);
+            ReleaseTemporaryBuffer(ref nLRR);
+            ReleaseTemporaryBuffer(ref nLR);
+
+            var nRLL = GetTemporaryBuffer();
+            var nRL = GetTemporaryBuffer();
+            var nRRLL = GetTemporaryBuffer();
+            var nRRL = GetTemporaryBuffer();
+            var nRRRL = GetTemporaryBuffer();
+            var nRRR = GetTemporaryBuffer();
+            var nRR = GetTemporaryBuffer();
+
+            var nRLLN = 0;
+            var nRLN = 0;
+            var nRRLLN = 0;
+            var nRRLN = 0;
+            var nRRRLN = 0;
+            var nRRRN = 0;
+            var nRRN = 0;
+
+            Sub(w2m1, w2m1N, w1m2, w1m2N, nRLL, out nRLLN);
+            Scale(nRLL, nRLLN, m0[1], nRL, out nRLN);
+            Sub(w2m0, w2m0N, w0m2, w0m2N, nRRLL, out nRRLLN);
+            Scale(nRRLL, nRRLLN, -m1[1], nRRL, out nRRLN);
+            Sub(w1m0, w1m0N, w0m1, w0m1N, nRRRL, out nRRRLN);
+            Scale(nRRRL, nRRRLN, m2[1], nRRR, out nRRRN);
+            Sum(nRRL, nRRLN, nRRR, nRRRN, nRR, out nRRN);
+            Sum(nRL, nRLN, nRR, nRRN, nR, out nRN);
+            
+            ReleaseTemporaryBuffer(ref nRLL);
+            ReleaseTemporaryBuffer(ref nRL);
+            ReleaseTemporaryBuffer(ref nRRLL);
+            ReleaseTemporaryBuffer(ref nRRL);
+            ReleaseTemporaryBuffer(ref nRRRL);
+            ReleaseTemporaryBuffer(ref nRRR);
+            ReleaseTemporaryBuffer(ref nRR);
+            
+            Sum(nL, nLN, nR, nRN, n, out nN);
+            
+            ReleaseTemporaryBuffer(ref nL);
+            ReleaseTemporaryBuffer(ref nR);
+            
+            ReleaseTemporaryBuffer(ref w0m1);
+            ReleaseTemporaryBuffer(ref w0m2);
+            ReleaseTemporaryBuffer(ref w0m3);
+            ReleaseTemporaryBuffer(ref w1m0);
+            ReleaseTemporaryBuffer(ref w1m2);
+            ReleaseTemporaryBuffer(ref w1m3);
+            ReleaseTemporaryBuffer(ref w2m0);
+            ReleaseTemporaryBuffer(ref w2m1);
+            ReleaseTemporaryBuffer(ref w2m3);
+            ReleaseTemporaryBuffer(ref w3m0);
+            ReleaseTemporaryBuffer(ref w3m1);
+            ReleaseTemporaryBuffer(ref w3m2);
+            
+            Sub(p, pN, n, nN, d, out dN);
+
+            var result = d[dN - 1];
+            
+            ReleaseTemporaryBuffer(ref p);
+            ReleaseTemporaryBuffer(ref n);
+            ReleaseTemporaryBuffer(ref d);
+
+            return result;
         }
 
-        private static float[] TwoProd(float a, float b, float[] result = null)
+        private static void TwoProd(float a, float b, float[] result)
         {
             var x = a * b;
 
@@ -123,41 +405,32 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
             var y = alo * blo - err3;
             
-            if (result != null)
-            {
-                result[0] = y;
-                result[1] = x;
-                return result;
-            }
-            return new[] { y, x };
+            result[0] = y;
+            result[1] = x;
         }
 
-        private static float[] TwoSum(float a, float b, float[] result = null)
+        private static void TwoSum(float a, float b, float[] result)
         {
             var x = a + b;
             var bv = x - a;
             var av = x - bv;
             var br = b - bv;
             var ar = a - av;
-            if (result != null)
-            {
-                result[0] = ar + br;
-                result[1] = x;
-                return result;
-            }
-            return new[] { ar + br, x };
+            
+            result[0] = ar + br;
+            result[1] = x;
         }
-        private static float[] Sum(float[] e, float[] f)
+        
+        private static void Sum(float[] e, int eN, float[] f, int fN, float[] result, out int resultN)
         {
-            var ne = e.Length;
-            var nf = f.Length;
-            if(ne == 1 && nf == 1)
+            if(eN == 1 && fN == 1)
             {
-                return ScalarScalar(e[0], f[0]);
+                ScalarScalar(e[0], f[0], result, out resultN);
+                return;
             }
-            var n = ne + nf;
-            var g = new float[n];
-            var count = 0;
+
+            resultN = 0;
+            
             var eptr = 0;
             var fptr = 0;
             var ei = e[eptr];
@@ -170,7 +443,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             {
                 b = ei;
                 eptr += 1;
-                if (eptr < ne)
+                if (eptr < eN)
                 {
                     ei = e[eptr];
                     ea = Mathf.Abs(ei);
@@ -180,18 +453,18 @@ namespace SVGMeshUnity.Internals.Cdt2d
             {
                 b = fi;
                 fptr += 1;
-                if (fptr < nf)
+                if (fptr < fN)
                 {
                     fi = f[fptr];
                     fa = Mathf.Abs(fi);
                 }
             }
 
-            if ((eptr < ne && ea < fa) || (fptr >= nf))
+            if ((eptr < eN && ea < fa) || (fptr >= fN))
             {
                 a = ei;
                 eptr += 1;
-                if (eptr < ne)
+                if (eptr < eN)
                 {
                     ei = e[eptr];
                     ea = Mathf.Abs(ei);
@@ -201,7 +474,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             {
                 a = fi;
                 fptr += 1;
-                if (fptr < nf)
+                if (fptr < fN)
                 {
                     fi = f[fptr];
                     fa = Mathf.Abs(fi);
@@ -218,13 +491,13 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var _av = 0f;
             var _br = 0f;
             var _ar = 0f;
-            while (eptr < ne && fptr < nf)
+            while (eptr < eN && fptr < fN)
             {
                 if (ea < fa)
                 {
                     a = ei;
                     eptr += 1;
-                    if (eptr < ne)
+                    if (eptr < eN)
                     {
                         ei = e[eptr];
                         ea = Mathf.Abs(ei);
@@ -234,7 +507,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 {
                     a = fi;
                     fptr += 1;
-                    if (fptr < nf)
+                    if (fptr < fN)
                     {
                         fi = f[fptr];
                         fa = Mathf.Abs(fi);
@@ -247,7 +520,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 y = b - bv;
                 if (y != 0f)
                 {
-                    g[count++] = y;
+                    result[resultN++] = y;
                 }
 
                 _x = q1 + x;
@@ -259,7 +532,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 q1 = _x;
             }
 
-            while (eptr < ne)
+            while (eptr < eN)
             {
                 a = ei;
                 b = q0;
@@ -268,7 +541,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 y = b - bv;
                 if (y != 0f)
                 {
-                    g[count++] = y;
+                    result[resultN++] = y;
                 }
 
                 _x = q1 + x;
@@ -279,13 +552,13 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 q0 = _ar + _br;
                 q1 = _x;
                 eptr += 1;
-                if (eptr < ne)
+                if (eptr < eN)
                 {
                     ei = e[eptr];
                 }
             }
 
-            while (fptr < nf)
+            while (fptr < fN)
             {
                 a = fi;
                 b = q0;
@@ -294,7 +567,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 y = b - bv;
                 if (y != 0f)
                 {
-                    g[count++] = y;
+                    result[resultN++] = y;
                 }
 
                 _x = q1 + x;
@@ -305,7 +578,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 q0 = _ar + _br;
                 q1 = _x;
                 fptr += 1;
-                if (fptr < nf)
+                if (fptr < fN)
                 {
                     fi = f[fptr];
                 }
@@ -313,45 +586,30 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
             if (q0 != 0f)
             {
-                g[count++] = q0;
+                result[resultN++] = q0;
             }
 
             if (q1 != 0f)
             {
-                g[count++] = q1;
+                result[resultN++] = q1;
             }
 
-            if (count == 0)
+            if (resultN == 0)
             {
-                g[count++] = 0f;
+                result[resultN++] = 0f;
             }
-
-            if (g.Length != count)
-            {
-                var g_ = new float[count];
-                for (var i = 0; i < count; ++i)
-                {
-                    g_[i] = g[i];
-                }
-
-                g = g_;
-            }
-
-            return g;
         }
 
-        private static float[] Sub(float[] e, float[] f)
+        private static void Sub(float[] e, int eN, float[] f, int fN, float[] result, out int resultN)
         {
-            var ne = e.Length;
-            var nf = f.Length;
-            if (ne == 1 && nf == 1)
+            if (eN == 1 && fN == 1)
             {
-                return ScalarScalar(e[0], -f[0]);
+                ScalarScalar(e[0], -f[0], result, out resultN);
+                return;
             }
 
-            var n = ne + nf;
-            var g = new float[n];
-            var count = 0;
+            resultN = 0;
+
             var eptr = 0;
             var fptr = 0;
             var ei = e[eptr];
@@ -364,7 +622,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             {
                 b = ei;
                 eptr += 1;
-                if (eptr < ne)
+                if (eptr < eN)
                 {
                     ei = e[eptr];
                     ea = Mathf.Abs(ei);
@@ -374,18 +632,18 @@ namespace SVGMeshUnity.Internals.Cdt2d
             {
                 b = fi;
                 fptr += 1;
-                if (fptr < nf)
+                if (fptr < fN)
                 {
                     fi = -f[fptr];
                     fa = Mathf.Abs(fi);
                 }
             }
 
-            if ((eptr < ne && ea < fa) || (fptr >= nf))
+            if ((eptr < eN && ea < fa) || (fptr >= fN))
             {
                 a = ei;
                 eptr += 1;
-                if (eptr < ne)
+                if (eptr < eN)
                 {
                     ei = e[eptr];
                     ea = Mathf.Abs(ei);
@@ -395,7 +653,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             {
                 a = fi;
                 fptr += 1;
-                if (fptr < nf)
+                if (fptr < fN)
                 {
                     fi = -f[fptr];
                     fa = Mathf.Abs(fi);
@@ -412,13 +670,13 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var _av = 0f;
             var _br = 0f;
             var _ar = 0f;
-            while (eptr < ne && fptr < nf)
+            while (eptr < eN && fptr < fN)
             {
                 if (ea < fa)
                 {
                     a = ei;
                     eptr += 1;
-                    if (eptr < ne)
+                    if (eptr < eN)
                     {
                         ei = e[eptr];
                         ea = Mathf.Abs(ei);
@@ -428,7 +686,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 {
                     a = fi;
                     fptr += 1;
-                    if (fptr < nf)
+                    if (fptr < fN)
                     {
                         fi = -f[fptr];
                         fa = Mathf.Abs(fi);
@@ -441,7 +699,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 y = b - bv;
                 if (y != 0f)
                 {
-                    g[count++] = y;
+                    result[resultN++] = y;
                 }
 
                 _x = q1 + x;
@@ -453,7 +711,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 q1 = _x;
             }
 
-            while (eptr < ne)
+            while (eptr < eN)
             {
                 a = ei;
                 b = q0;
@@ -462,7 +720,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 y = b - bv;
                 if (y != 0f)
                 {
-                    g[count++] = y;
+                    result[resultN++] = y;
                 }
 
                 _x = q1 + x;
@@ -473,13 +731,13 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 q0 = _ar + _br;
                 q1 = _x;
                 eptr += 1;
-                if (eptr < ne)
+                if (eptr < eN)
                 {
                     ei = e[eptr];
                 }
             }
 
-            while (fptr < nf)
+            while (fptr < fN)
             {
                 a = fi;
                 b = q0;
@@ -488,7 +746,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 y = b - bv;
                 if (y != 0f)
                 {
-                    g[count++] = y;
+                    result[resultN++] = y;
                 }
 
                 _x = q1 + x;
@@ -499,7 +757,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 q0 = _ar + _br;
                 q1 = _x;
                 fptr += 1;
-                if (fptr < nf)
+                if (fptr < fN)
                 {
                     fi = -f[fptr];
                 }
@@ -507,65 +765,71 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
             if (q0 != 0f)
             {
-                g[count++] = q0;
+                result[resultN++] = q0;
             }
 
             if (q1 != 0f)
             {
-                g[count++] = q1;
+                result[resultN++] = q1;
             }
 
-            if (count == 0)
+            if (resultN == 0)
             {
-                g[count++] = 0.0f;
+                result[resultN++] = 0.0f;
             }
-
-            if (g.Length != count)
-            {
-                var g_ = new float[count];
-                for (var i = 0; i < count; ++i)
-                {
-                    g_[i] = g[i];
-                }
-
-                g = g_;
-            }
-
-            return g;
         }
 
-        private static float[] Scale(float[] e, float scale)
+        private static void Scale(float[] e, int eN, float scale, float[] result, out int resultN)
         {
-            var n = e.Length;
-            if (n == 1)
+            if (eN == 1)
             {
-                var ts = TwoProd(e[0], scale);
+                var ts = GetTemporaryBuffer();
+                
+                TwoProd(e[0], scale, ts);
+                
                 if (ts[0] != 0f)
                 {
-                    return ts;
+                    result[0] = ts[0];
+                    result[1] = ts[1];
+                    resultN = 2;
+                    ReleaseTemporaryBuffer(ref ts);
+                    return;
                 }
 
-                return new[] {ts[1]};
+                result[0] = ts[1];
+                resultN = 1;
+                ReleaseTemporaryBuffer(ref ts);
+                return;
             }
 
-            var g = new float[2 * n];
-            var q = new[] {0.1f, 0.1f};
-            var t = new[] {0.1f, 0.1f};
-            var count = 0;
+            var q = GetTemporaryBuffer();
+            var t = GetTemporaryBuffer();
+
+            q[0] = 0.1f;
+            q[1] = 0.1f;
+            t[0] = 0.1f;
+            t[1] = 0.1f;
+
+            resultN = 0;
+            
             TwoProd(e[0], scale, q);
+            
             if (q[0] != 0f)
             {
-                g[count++] = q[0];
+                result[resultN++] = q[0];
             }
 
-            for (var i = 1; i < n; ++i)
+            for (var i = 1; i < eN; ++i)
             {
                 TwoProd(e[i], scale, t);
+                
                 var pq = q[1];
+                
                 TwoSum(pq, t[0], q);
+                
                 if (q[0] != 0f)
                 {
-                    g[count++] = q[0];
+                    result[resultN++] = q[0];
                 }
 
                 var a = t[1];
@@ -574,38 +838,29 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 var bv = x - a;
                 var y = b - bv;
                 q[1] = x;
+                
                 if (y != 0f)
                 {
-                    g[count++] = y;
+                    result[resultN++] = y;
                 }
             }
 
             if (q[1] != 0f)
             {
-                g[count++] = q[1];
+                result[resultN++] = q[1];
             }
+            
+            ReleaseTemporaryBuffer(ref q);
+            ReleaseTemporaryBuffer(ref t);
 
-            if (count == 0)
+            if (resultN == 0)
             {
-                g[count++] = 0.0f;
+                result[resultN++] = 0.0f;
             }
-
-            if (g.Length != count)
-            {
-                var g_ = new float[count];
-                for (var i = 0; i < count; ++i)
-                {
-                    g_[i] = g[i];
-                }
-
-                g = g_;
-            }
-
-            return g;
         }
 
         //Easy case: Add two scalars
-        private static float[] ScalarScalar(float a, float b)
+        private static void ScalarScalar(float a, float b, float[] result, out int resultN)
         {
             var x = a + b;
             var bv = x - a;
@@ -615,9 +870,13 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var y = ar + br;
             if (y != 0f)
             {
-                return new[] {y, x};
+                result[0] = y;
+                result[1] = x;
+                resultN = 2;
+                return;
             }
-            return new[] { x };
+            result[0] = x;
+            resultN = 1;
         }
     }
 }

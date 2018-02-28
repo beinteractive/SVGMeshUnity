@@ -5,20 +5,18 @@ namespace SVGMeshUnity.Internals
 {
     public class WorkBufferPool
     {
-        Dictionary<Type, List<object>> Pool = new Dictionary<Type, List<object>>();
+        private readonly Dictionary<Type, Stack<object>> Pool = new Dictionary<Type, Stack<object>>();
 
         public WorkBuffer<T> Get<T>()
         {
-            List<object> list;
+            Stack<object> list;
             WorkBuffer<T> buf = null;
 
             if (Pool.TryGetValue(typeof(T), out list))
             {
                 if (list.Count > 0)
                 {
-                    var n = list.Count - 1;
-                    buf = (WorkBuffer<T>)list[n];
-                    list.RemoveAt(n);
+                    buf = (WorkBuffer<T>)list.Pop();
                 }
             }
             
@@ -32,19 +30,16 @@ namespace SVGMeshUnity.Internals
 
         public void Release<T>(ref WorkBuffer<T> buf)
         {
-            List<object> list;
+            Stack<object> list;
             
             buf.Clear();
 
-            if (Pool.TryGetValue(typeof(T), out list))
+            if (!Pool.TryGetValue(typeof(T), out list))
             {
-                list.Add(buf);
+                Pool[typeof(T)] = list = new Stack<object>();
             }
-            else
-            {
-                Pool[typeof(T)] = new List<object> { buf };
-            }
-
+            
+            list.Push(buf);
             buf = null;
         }
     }
