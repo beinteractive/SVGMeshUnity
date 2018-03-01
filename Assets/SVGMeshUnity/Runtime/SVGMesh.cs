@@ -53,7 +53,7 @@ namespace SVGMeshUnity
                 Mesh.MarkDynamic();
             }
             
-            MeshData.Flip();
+            MeshData.MakeUnityFriendly();
             MeshData.Upload(Mesh);
 
             var filter = GetComponent<MeshFilter>();

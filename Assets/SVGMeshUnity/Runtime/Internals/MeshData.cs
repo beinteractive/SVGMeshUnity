@@ -82,12 +82,30 @@ namespace SVGMeshUnity.Internals
             }
         }
 
-        public void Flip()
+        public void MakeUnityFriendly()
         {
-            var l = Vertices.Count;
-            for (var i = 0; i < l; ++i)
             {
-                Vertices[i] *= -1f;
+                var vertices = Vertices;
+                var l = vertices.Count;
+                for (var i = 0; i < l; ++i)
+                {
+                    var v = vertices[i];
+                    v.y *= -1f;
+                    vertices[i] = v;
+                }
+            }
+            {
+                var triangles = Triangles;
+                var l = triangles.Count;
+                for (var i = 0; i < l; i += 3)
+                {
+                    var a = triangles[i + 0];
+                    var b = triangles[i + 1];
+                    var c = triangles[i + 2];
+                    triangles[i + 0] = b;
+                    triangles[i + 1] = c;
+                    triangles[i + 2] = a;
+                }
             }
         }
 
