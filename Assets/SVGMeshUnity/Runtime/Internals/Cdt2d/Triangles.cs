@@ -164,5 +164,29 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 }
             }
         }
+
+        public void Fill(WorkBuffer<Vector3Int> triangles)
+        {
+            var n = PrivateStars.Length;
+
+            triangles.Extend(n);
+            triangles.Clear();
+            
+            for(var i = 0; i < n; ++i)
+            {
+                var list = PrivateStars[i];
+                var data = list.Data;
+                var m = list.UsedSize;
+                for(var j = 0; j < m; ++j)
+                {
+                    var s = data[j];
+                    if(i < Mathf.Min(s.x, s.y))
+                    {
+                        var v = new Vector3Int(i, s.x, s.y);
+                        triangles.Push(ref v);
+                    }
+                }
+            }
+        }
     }
 }

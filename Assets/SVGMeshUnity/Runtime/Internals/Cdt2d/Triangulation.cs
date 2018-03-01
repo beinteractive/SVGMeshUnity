@@ -13,6 +13,7 @@
 
         private MonotoneTriangulation MonotoneTriangulation = new MonotoneTriangulation();
         private DelaunayRefine DelaunayRefine = new DelaunayRefine();
+        private Filter Filter = new Filter();
 
         public void BuildTriangles(MeshData data)
         {
@@ -39,25 +40,30 @@
                     DelaunayRefine.RefineTriangles(triangles);
                 }
 
-                /**
+                Filter.WorkBufferPool = WorkBufferPool;
+                Filter.Infinity = Infinity;
+
                 //Filter points
-                if (!exterior)
+                if (!Exterior)
                 {
-                    return filterTriangulation(triangulation, -1)
+                    Filter.Target = -1;
+                    Filter.Do(triangles, data.Triangles);
+                    return;
                 }
-                else if (!interior)
+                if (!Interior)
                 {
-                    return filterTriangulation(triangulation, 1, infinity)
+                    Filter.Target = 1;
+                    Filter.Do(triangles, data.Triangles);
+                    return;
                 }
-                else if (infinity)
+                if (Infinity)
                 {
-                    return filterTriangulation(triangulation, 0, infinity)
+                    Filter.Target = 0;
+                    Filter.Do(triangles, data.Triangles);
+                    return;
                 }
-                else
-                /**/
-                {
-                    triangles.Fill(data.Triangles);
-                }
+                
+                triangles.Fill(data.Triangles);
 
             }
         }

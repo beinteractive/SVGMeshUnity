@@ -28,9 +28,9 @@ namespace SVGMeshUnity.Internals
         private T[] PrivateData;
         private int PrivateUsedSize;
 
-        private void Grow()
+        private void Grow(int size)
         {
-            var newPrivateData = new T[PrivateData.Length + GrowSize];
+            var newPrivateData = new T[size];
             PrivateData.CopyTo(newPrivateData, 0);
             PrivateData = newPrivateData;
         }
@@ -39,8 +39,31 @@ namespace SVGMeshUnity.Internals
         {
             if (PrivateData.Length == PrivateUsedSize)
             {
-                Grow();
+                Grow(PrivateData.Length + GrowSize);
             }
+        }
+
+        public void Extend(int size)
+        {
+            if (PrivateData.Length < size)
+            {
+                Grow(size);
+            }
+        }
+
+        public void Fill(ref T val, int n)
+        {
+            if (PrivateData.Length < n)
+            {
+                Grow(n);
+            }
+
+            for (var i = 0; i < n; ++i)
+            {
+                PrivateData[i] = val;
+            }
+
+            PrivateUsedSize = n;
         }
 
         public void Push(ref T val)
@@ -132,6 +155,11 @@ namespace SVGMeshUnity.Internals
         }
 
         public void Dump()
+        {
+            Debug.Log(PrivateData.Take(PrivateUsedSize).Aggregate("", (_, s) => _ + s.ToString() + "\n"));
+        }
+
+        public void DumpHash()
         {
             Debug.LogFormat("{0}{1}", PrivateUsedSize, PrivateData.Select(_ => string.Format("{0:x}",_ != null ? _.GetHashCode() : 0)).Aggregate("", (_, s) => _ + ", " + s));
         }
