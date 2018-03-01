@@ -34,11 +34,11 @@ Then call `Mesh.Fill()`, a mesh will be generated.
 
 Instead of use SVG path data, you can directly make path data in your code.
 
-![pentagon](https://user-images.githubusercontent.com/1482297/36833033-692d7788-1d71-11e8-8cc8-fd4dc3110d51.gif)
-![pentagon-wire](https://user-images.githubusercontent.com/1482297/36833032-6908c1b8-1d71-11e8-870d-1f8c456820e7.gif)
+![pentagon](https://user-images.githubusercontent.com/1482297/36834678-f834db56-1d76-11e8-8845-56547b673004.gif)
+![pentagon-wire](https://user-images.githubusercontent.com/1482297/36834677-f807631a-1d76-11e8-8358-29cbacdfcbfb.gif)
 
-![square](https://user-images.githubusercontent.com/1482297/36833036-69729ae8-1d71-11e8-9640-a806918305d5.gif)
-![square-wire](https://user-images.githubusercontent.com/1482297/36833035-69502094-1d71-11e8-9e3d-eb8f0ca1d3ca.gif)
+![square](https://user-images.githubusercontent.com/1482297/36834680-f882d6bc-1d76-11e8-9330-05bec5611a6e.gif)
+![square-wire](https://user-images.githubusercontent.com/1482297/36834679-f85b554c-1d76-11e8-9f84-75953f338ea7.gif)
 
 ```C#
 void Update()
