@@ -111,6 +111,7 @@ namespace SVGMeshUnity.Internals
 
         public void Upload(Mesh m)
         {
+            m.Clear();
             m.SetVertices(Vertices);
             m.SetTriangles(Triangles, 0);
             m.RecalculateBounds();
