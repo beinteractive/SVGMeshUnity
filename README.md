@@ -35,7 +35,7 @@ Then call `Mesh.Fill()`, a mesh will be generated.
 Instead of use SVG path data, you can directly make path data in your code.
 
 ![pentagon](https://user-images.githubusercontent.com/1482297/36834678-f834db56-1d76-11e8-8845-56547b673004.gif)
-![pentagon-wire](https://user-images.githubusercontent.com/1482297/36834677-f807631a-1d76-11e8-8358-29cbacdfcbfb.gif)
+![pentagon-wire](https://user-images.githubusercontent.com/1482297/36834963-f60ca7fe-1d77-11e8-9844-54666eb864ae.gif)
 
 ![square](https://user-images.githubusercontent.com/1482297/36834680-f882d6bc-1d76-11e8-9330-05bec5611a6e.gif)
 ![square-wire](https://user-images.githubusercontent.com/1482297/36834679-f85b554c-1d76-11e8-9f84-75953f338ea7.gif)
