@@ -34,9 +34,6 @@ Then call `Mesh.Fill()`, a mesh will be generated.
 
 Instead of use SVG path data, you can directly make path data in your code.
 
-![pentagon](https://user-images.githubusercontent.com/1482297/36834678-f834db56-1d76-11e8-8845-56547b673004.gif)
-![square](https://user-images.githubusercontent.com/1482297/36834680-f882d6bc-1d76-11e8-9330-05bec5611a6e.gif)
-
 ```C#
 void Update()
 {
