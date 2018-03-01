@@ -1,7 +1,7 @@
 ﻿using SVGMeshUnity;
 using UnityEngine;
 
-public class SVGTest : MonoBehaviour
+public class Simple : MonoBehaviour
 {
 	private static readonly string SVG_PATH =
 
