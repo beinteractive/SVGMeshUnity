@@ -11,7 +11,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
         //Assume edges are sorted lexicographically
         public void RefineTriangles(Triangles triangles)
         {
-            var stack = WorkBufferPool.Get<Vector2Int>();
+            var stack = WorkBufferPool.Get<Int2>();
 
             var points = triangles.Vertices;
             var numPoints = points.Count;
@@ -59,7 +59,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                     //If edge is in circle, flip it
                     if (Robust.InSphere(points[a], points[b], points[x], points[y]) < 0f)
                     {
-                        var v = new Vector2Int(a, b);
+                        var v = new Int2(a, b);
                         stack.Push(ref v);
                     }
                 }
@@ -116,7 +116,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             WorkBufferPool.Release(ref stack);
         }
         
-        private void TestFlip(List<Vector3> points, Triangles triangles, WorkBuffer<Vector2Int> stack, int a, int b, int x)
+        private void TestFlip(List<Vector3> points, Triangles triangles, WorkBuffer<Int2> stack, int a, int b, int x)
         {
             var y = triangles.Opposite(a, b);
 
@@ -146,7 +146,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             //Test if edge is delaunay
             if (Robust.InSphere(points[a], points[b], points[x], points[y]) < 0f)
             {
-                var v = new Vector2Int(a, b);
+                var v = new Int2(a, b);
                 stack.Push(ref v);
             }
         }

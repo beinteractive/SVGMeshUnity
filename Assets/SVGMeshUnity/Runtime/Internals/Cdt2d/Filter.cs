@@ -112,13 +112,13 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 pool.Get(ref Boundary);
             }
 
-            public WorkBuffer<Vector3Int> Cells;
+            public WorkBuffer<Int3> Cells;
             public WorkBuffer<int> Neighbor;
             public WorkBuffer<bool> Constraint;
             public WorkBuffer<int> Flags;
             public WorkBuffer<int> Active;
             public WorkBuffer<int> Next;
-            public WorkBuffer<Vector3Int> Boundary;
+            public WorkBuffer<Int3> Boundary;
 
             private WorkBufferPool WorkBufferPool;
             private bool Disposed = false;
@@ -165,29 +165,6 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 return buf.Data.Take(buf.UsedSize).Aggregate("", (_, s) => _ + " " + s.ToString() + ",\n");
             }
         }
-
-        private class CellComparer : IComparer<Vector3Int>
-        {
-            public static int CompareCell(Vector3Int a, Vector3Int b)
-            {
-                var d = 0;
-            
-                d = a.x - b.x;
-                if (d != 0) return d;
-            
-                d = a.y - b.y;
-                if (d != 0) return d;
-
-                return a.z - b.z;
-            }
-            
-            public int Compare(Vector3Int a, Vector3Int b)
-            {
-                return CompareCell(a, b);
-            }
-        }
-        
-        private static readonly CellComparer CompareCell = new CellComparer();
         
         private FaceIndex IndexCells(Triangles triangles)
         {
@@ -227,7 +204,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 }
             }
 
-            cells.Sort(CompareCell);
+            WorkBuffer<Int3>.Sort(cells);
 
             //Initialize flag array
             var flags = index.Flags;
@@ -249,8 +226,25 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 var c = cellsData[i];
                 for (var j = 0; j < 3; ++j)
                 {
-                    var x = c[j];
-                    var y = c[(j + 1) % 3];
+                    var x = 0;
+                    var y = 0;
+
+                    switch (j)
+                    {
+                        case 0:
+                            x = c.x;
+                            y = c.y;
+                            break;
+                        case 1:
+                            x = c.y;
+                            y = c.z;
+                            break;
+                        case 2:
+                            x = c.z;
+                            y = c.x;
+                            break;
+                    }
+
                     var a = neighborData[3 * i + j] = Locate(cells, y, x, triangles.Opposite(y, x));
                     var b = constraintData[3 * i + j] = triangles.IsConstraint(x, y);
                     if (a < 0)
@@ -267,7 +261,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
                         if (Infinity)
                         {
-                            var v = new Vector3Int(y, x, -1);
+                            var v = new Int3(y, x, -1);
                             boundary.Push(ref v);
                         }
                     }
@@ -277,7 +271,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             return index;
         }
 
-        private int Locate(WorkBuffer<Vector3Int> cells, int a, int b, int c)
+        private int Locate(WorkBuffer<Int3> cells, int a, int b, int c)
         {
             var x = a;
             var y = b;
@@ -303,10 +297,10 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 return -1;
             }
 
-            return BinarySearch.EQ(cells.Data, new Vector3Int(x, y, z), CellComparer.CompareCell, 0, cells.UsedSize - 1);
+            return BinarySearch.EQ(cells.Data, new Int3(x, y, z), 0, cells.UsedSize - 1);
         }
         
-        private void FilterCells(WorkBuffer<Vector3Int> cells, WorkBuffer<int> flags)
+        private void FilterCells(WorkBuffer<Int3> cells, WorkBuffer<int> flags)
         {
             var ptr = 0;
             var n = cells.UsedSize;
@@ -321,7 +315,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             cells.RemoveLast(n - ptr);
         }
 
-        private void FillTriangles(WorkBuffer<Vector3Int> from, List<int> to)
+        private void FillTriangles(WorkBuffer<Int3> from, List<int> to)
         {
             var n = from.UsedSize;
             

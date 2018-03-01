@@ -10,13 +10,13 @@ namespace SVGMeshUnity.Internals
         public MeshData()
         {
             Vertices = new List<Vector3>();
-            Edges = new List<Vector2Int>();
+            Edges = new List<Int2>();
             Triangles = new List<int>();
             VertexIndices = new Hashtable();
         }
         
         public List<Vector3> Vertices { get; private set; }
-        public List<Vector2Int> Edges { get; private set; }
+        public List<Int2> Edges { get; private set; }
         public List<int> Triangles { get; private set; }
 
         private Hashtable VertexIndices;
@@ -70,7 +70,7 @@ namespace SVGMeshUnity.Internals
                 }
                 else
                 {
-                    edges.Add(new Vector2Int(prevEdgeidx, idx));
+                    edges.Add(new Int2(prevEdgeidx, idx));
                 }
 
                 prevEdgeidx = idx;
@@ -78,7 +78,7 @@ namespace SVGMeshUnity.Internals
 
             if (prevEdgeidx != firstEdgeIdx)
             {
-                edges.Add(new Vector2Int(prevEdgeidx, firstEdgeIdx));
+                edges.Add(new Int2(prevEdgeidx, firstEdgeIdx));
             }
         }
 

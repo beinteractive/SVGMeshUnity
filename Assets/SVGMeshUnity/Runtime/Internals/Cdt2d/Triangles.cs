@@ -19,29 +19,29 @@ namespace SVGMeshUnity.Internals.Cdt2d
             get { return PrivateVertices; }
         }
 
-        public WorkBuffer<Vector2Int>[] Stars
+        public WorkBuffer<Int2>[] Stars
         {
             get { return PrivateStars; }
         }
 
         private List<Vector3> PrivateVertices;
-        private WorkBuffer<Vector2Int>[] PrivateStars;
-        private Vector2Int[] Edges;
+        private WorkBuffer<Int2>[] PrivateStars;
+        private Int2[] Edges;
 
         private void CreateStars(int n)
         {
-            var stars = new WorkBuffer<Vector2Int>[n];
+            var stars = new WorkBuffer<Int2>[n];
             for (var i = 0; i < n; ++i)
             {
-                stars[i] = new WorkBuffer<Vector2Int>(16);
+                stars[i] = new WorkBuffer<Int2>(16);
             }
             PrivateStars = stars;
         }
 
-        private void CreateEdges(List<Vector2Int> source)
+        private void CreateEdges(List<Int2> source)
         {
             var l = source.Count;
-            var edges = new Vector2Int[l];
+            var edges = new Int2[l];
             for (var i = 0; i < l; ++i)
             {
                 var edge = source[i];
@@ -53,15 +53,8 @@ namespace SVGMeshUnity.Internals.Cdt2d
                 }
                 edges[i] = edge;
             }
-            Array.Sort(edges, CompareEdge);
+            Sort<Int2>.QuickSort(edges, 0, edges.Length - 1);
             Edges = edges;
-        }
-
-        private static int CompareEdge(Vector2Int a, Vector2Int b)
-        {
-            var d = a.x - b.x;
-            if (d != 0) return d;
-            return a.y - b.y;
         }
  
         private void CreateTriangles(List<int> source)
@@ -75,9 +68,9 @@ namespace SVGMeshUnity.Internals.Cdt2d
         
         public void AddTriangle(int i, int j, int k)
         {
-            var jk = new Vector2Int(j, k);
-            var ki = new Vector2Int(k, i);
-            var ij = new Vector2Int(i, j);
+            var jk = new Int2(j, k);
+            var ki = new Int2(k, i);
+            var ij = new Int2(i, j);
             PrivateStars[i].Push(ref jk);
             PrivateStars[j].Push(ref ki);
             PrivateStars[k].Push(ref ij);
@@ -90,7 +83,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             RemovePair(PrivateStars[k], i, j);
         }
 
-        private void RemovePair(WorkBuffer<Vector2Int> list, int j, int k)
+        private void RemovePair(WorkBuffer<Int2> list, int j, int k)
         {
             var n = list.UsedSize;
             var data = list.Data;
@@ -133,8 +126,8 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
         public bool IsConstraint(int i, int j)
         {
-            var e = new Vector2Int(Mathf.Min(i, j), Mathf.Max(i, j));
-            return BinarySearch.EQ(Edges, e, CompareEdge, 0, Edges.Length) >= 0;
+            var e = new Int2(Mathf.Min(i, j), Mathf.Max(i, j));
+            return BinarySearch.EQ(Edges, e, 0, Edges.Length) >= 0;
         }
 
         public void Fill(List<int> triangles)
@@ -165,7 +158,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             }
         }
 
-        public void Fill(WorkBuffer<Vector3Int> triangles)
+        public void Fill(WorkBuffer<Int3> triangles)
         {
             var n = PrivateStars.Length;
 
@@ -182,7 +175,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
                     var s = data[j];
                     if(i < Mathf.Min(s.x, s.y))
                     {
-                        var v = new Vector3Int(i, s.x, s.y);
+                        var v = new Int3(i, s.x, s.y);
                         triangles.Push(ref v);
                     }
                 }

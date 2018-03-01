@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -18,12 +19,40 @@ namespace SVGMeshUnity.Internals.Cdt2d
         }
         
         //An event in the sweep line procedure
-        private class Event
+        private class Event : IComparable<Event>
         {
             public Vector2 A;
             public Vector2 B;
             public EventType Type;
             public int Index;
+            
+            //This is used to compare events for the sweep line procedure
+            // Points are:
+            //  1. sorted lexicographically
+            //  2. sorted by type  (point < end < start)
+            //  3. segments sorted by winding order
+            //  4. sorted by index
+            public int CompareTo(Event b)
+            {
+                var d = 0;
+
+                d = Sign(A.x - b.A.x);
+                if (d != 0) return d;
+            
+                d = Sign(A.y - b.A.y);
+                if (d != 0) return d;
+
+                d = Type - b.Type;
+                if (d != 0) return d;
+            
+                if (Type != EventType.Point)
+                {
+                    d = Sign(Robust.Orientation(A, B, b.B));
+                    if (d != 0) return d;
+                }
+
+                return Index - b.Index;
+            }
         }
         
         //A partial convex hull fragment, made of two unimonotone polygons
@@ -102,7 +131,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             }
 
             //Sort events
-            events.Sort(CompareEvent);
+            WorkBuffer<Event>.Sort(events);
 
             if (Verbose)
             {
@@ -159,38 +188,6 @@ namespace SVGMeshUnity.Internals.Cdt2d
             WorkBufferPool.Release(ref events);
         }
         
-        //This is used to compare events for the sweep line procedure
-        // Points are:
-        //  1. sorted lexicographically
-        //  2. sorted by type  (point < end < start)
-        //  3. segments sorted by winding order
-        //  4. sorted by index
-        private class EventComparer : IComparer<Event>
-        {
-            public int Compare(Event a, Event b)
-            {
-                var d = 0;
-
-                d = Sign(a.A.x - b.A.x);
-                if (d != 0) return d;
-            
-                d = Sign(a.A.y - b.A.y);
-                if (d != 0) return d;
-
-                d = a.Type - b.Type;
-                if (d != 0) return d;
-            
-                if (a.Type != EventType.Point)
-                {
-                    d = Sign(Robust.Orientation(a.A, a.B, b.B));
-                    if (d != 0) return d;
-                }
-
-                return a.Index - b.Index;
-            }
-        }
-        private static readonly EventComparer CompareEvent = new EventComparer();
-
         private static int Sign(float n)
         {
             if (n < 0f)
@@ -208,8 +205,8 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
         private void AddPoint(List<int> cells, WorkBuffer<PartialHull> hulls, List<Vector3> points, Vector2 p, int idx)
         {
-            var lo = BinarySearch.LT(hulls.Data, p, TestPoint, 0, hulls.UsedSize - 1);
-            var hi = BinarySearch.GT(hulls.Data, p, TestPoint, 0, hulls.UsedSize - 1);
+            var lo = BinarySearch.LT(hulls.Data, p, TestPoint.Default, 0, hulls.UsedSize - 1);
+            var hi = BinarySearch.GT(hulls.Data, p, TestPoint.Default, 0, hulls.UsedSize - 1);
             for (var i = lo; i < hi; ++i)
             {
                 var hull = hulls.Data[i];
@@ -267,7 +264,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
 
         private void SplitHulls(WorkBuffer<PartialHull> hulls, Event e)
         {
-            var splitIdx = BinarySearch.LE(hulls.Data, e, FindSplit, 0, hulls.UsedSize - 1);
+            var splitIdx = BinarySearch.LE(hulls.Data, e, FindSplit.Default, 0, hulls.UsedSize - 1);
             var hull = hulls.Data[splitIdx];
             var upperIds = hull.UpperIds;
             var x = upperIds.Data[upperIds.UsedSize - 1];
@@ -295,7 +292,7 @@ namespace SVGMeshUnity.Internals.Cdt2d
             var tmp = e.A;
             e.A = e.B;
             e.B = tmp;
-            var mergeIdx = BinarySearch.EQ(hulls.Data, e, FindSplit, 0, hulls.UsedSize - 1);
+            var mergeIdx = BinarySearch.EQ(hulls.Data, e, FindSplit.Default, 0, hulls.UsedSize - 1);
             var upper = hulls.Data[mergeIdx];
             var lower = hulls.Data[mergeIdx - 1];
             lower.UpperIds = upper.UpperIds;
@@ -309,36 +306,46 @@ namespace SVGMeshUnity.Internals.Cdt2d
             }
         }
 
-        private int TestPoint(PartialHull hull, Vector2 p)
+        private class TestPoint : BinarySearch.IComparer<PartialHull, Vector2>
         {
-            return Sign(Robust.Orientation(hull.A, hull.B, p));
+            public static readonly TestPoint Default = new TestPoint();
+            
+            public int Compare(PartialHull hull, Vector2 p)
+            {
+                return Sign(Robust.Orientation(hull.A, hull.B, p));
+            }
         }
-        
-        private int FindSplit(PartialHull hull, Event edge)
+
+        private class FindSplit : BinarySearch.IComparer<PartialHull, Event>
         {
-            var d = 0;
+            public static readonly FindSplit Default = new FindSplit();
             
-            if (hull.A.x < edge.A.x)
+            public int Compare(PartialHull hull, Event edge)
             {
-                d = Sign(Robust.Orientation(hull.A, hull.B, edge.A));
-            } else
-            {
-                d = Sign(Robust.Orientation(edge.B, edge.A, hull.A));
-            }
-
-            if (d != 0) return d;
+                var d = 0;
             
-            if (edge.B.x < hull.B.x)
-            {
-                d = Sign(Robust.Orientation(hull.A, hull.B, edge.B));
-            } else
-            {
-                d = Sign(Robust.Orientation(edge.B, edge.A, hull.B));
+                if (hull.A.x < edge.A.x)
+                {
+                    d = Sign(Robust.Orientation(hull.A, hull.B, edge.A));
+                } else
+                {
+                    d = Sign(Robust.Orientation(edge.B, edge.A, hull.A));
+                }
+
+                if (d != 0) return d;
+            
+                if (edge.B.x < hull.B.x)
+                {
+                    d = Sign(Robust.Orientation(hull.A, hull.B, edge.B));
+                } else
+                {
+                    d = Sign(Robust.Orientation(edge.B, edge.A, hull.B));
+                }
+
+                if (d != 0) return d;
+
+                return hull.Index - edge.Index;
             }
-
-            if (d != 0) return d;
-
-            return hull.Index - edge.Index;
         }
 
 

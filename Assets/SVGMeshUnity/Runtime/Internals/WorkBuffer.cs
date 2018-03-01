@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -139,9 +138,9 @@ namespace SVGMeshUnity.Internals
             --PrivateUsedSize;
         }
 
-        public void Sort(IComparer<T> c)
+        public static void Sort<G>(WorkBuffer<G> buf) where G : IComparable<G>
         {
-            Array.Sort(PrivateData, 0, PrivateUsedSize, c);
+            Internals.Sort<G>.QuickSort(buf.PrivateData, 0, buf.PrivateUsedSize - 1);
         }
 
         public void RemoveLast(int n)
