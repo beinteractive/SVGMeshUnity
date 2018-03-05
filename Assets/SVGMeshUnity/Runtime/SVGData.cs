@@ -481,6 +481,7 @@ namespace SVGMeshUnity
             var l = s.Length;
             var buf = new StringBuilder(16);
             var lastIsE = false;
+            var includesDot = false;
             for (var i = 0; i < l; ++i)
             {
                 var isBreak = false;
@@ -497,9 +498,21 @@ namespace SVGMeshUnity
                     case '7':
                     case '8':
                     case '9':
-                    case '.':
                         buf.Append(c);
                         lastIsE = false;
+                        break;
+                    case '.':
+                        if (includesDot)
+                        {
+                            isBreak = true;
+                            --i;
+                        }
+                        else
+                        {
+                            buf.Append(c);
+                            includesDot = true;
+                            lastIsE = false;
+                        }
                         break;
                     case 'e':
                         buf.Append(c);
@@ -538,6 +551,7 @@ namespace SVGMeshUnity
                         numArgs++;
                         buf.Length = 0;
                         lastIsE = false;
+                        includesDot = false;
                     }
                 }
             }
