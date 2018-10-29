@@ -18,7 +18,7 @@ namespace SVGMeshUnity
         
         internal List<Curve> Curves = new List<Curve>();
 
-        private Vector2 Start;
+        private Nullable<Vector2> Start;
         private Vector2 Current;
         private Nullable<Vector2> Bezier;
         private Nullable<Vector2> Quad;
@@ -26,7 +26,7 @@ namespace SVGMeshUnity
         public void Clear()
         {
             Curves.Clear();
-            Start = Vector2.zero;
+            Start = null;
             Current = Vector2.zero;
             Bezier = null;
             Quad = null;
@@ -78,6 +78,7 @@ namespace SVGMeshUnity
                 InControl = inControl,
                 OutControl = outControl,
             });
+            Start = Start == null ? Current : Start;
             Current = v;
             Bezier = null;
             Quad = null;
@@ -211,7 +212,12 @@ namespace SVGMeshUnity
 
         public void Close()
         {
-            Line(Start);
+            if (Start != null && Start != Current)
+            {
+                Line(Start.Value);
+            }
+
+            Start = null;
         }
 
 
@@ -391,12 +397,12 @@ namespace SVGMeshUnity
 
         private bool LoadCommand(string command, string type, float[] args, int numArgs, ref int argsIndex)
         {
-            if (argsIndex == numArgs)
+            var len = ArgumentLengthes[type];
+
+            if (argsIndex == numArgs && len > 0)
             {
                 return true;
             }
-            
-            var len = ArgumentLengthes[type];
 
             if (argsIndex + len > numArgs)
             {
@@ -468,6 +474,8 @@ namespace SVGMeshUnity
                     Close();
                     break;
             }
+
+            if (len == 0) return true;
 
             argsIndex += len;
 
